@@ -39,11 +39,13 @@ module.exports = async function handleUpdateState(fastify, connection, currentCl
     }
 
     if (name && name !== oldName) {
-      const cleanNameLog = name.replace(/\^./g, '');
+      const cleanNameLog = name.replace(/\^./g, '').trim();
       
-      logNameChangeHistory(
-        fastify.db, currentClientId, cleanNameLog, server || oldServer
-      ).catch(err => fastify.log.error(`Failed to log name history:`, err));
+      if (cleanNameLog !== ""){
+        logNameChangeHistory(
+          fastify.db, currentClientId, cleanNameLog, server || oldServer
+        ).catch(err => fastify.log.error(`Failed to log name history:`, err));
+      }
     }
     
     connection.sendSuccess('update_state');
