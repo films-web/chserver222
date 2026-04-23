@@ -58,9 +58,6 @@ module.exports = async function (fastify, opts) {
       throw new Error('You must provide a guid or name to search');
     }
 
-    // 1. LEFT JOIN custom_guids
-    // 2. Use COALESCE to prefer custom_guid over original guid, and alias it as 'guid'
-    // 3. Fallback for currentName so 'null' names show as UnnamedPlayer
     let query = `
       SELECT 
         c.id, 
@@ -92,7 +89,25 @@ module.exports = async function (fastify, opts) {
 
     try {
       const { rows } = await fastify.db.query(query, params);
-      return rows; 
+      
+      if (rows.length === 0) return rows;
+
+      const pipeline = fastify.redis.pipeline();
+      rows.forEach(row => pipeline.exists(`player:${row.id}`));
+      const redisResults = await pipeline.exec();
+
+      const enrichedRows = rows.map((row, index) => {
+        const isOnline = redisResults[index][1] === 1; 
+
+        return {
+          ...row,
+          isOnline: isOnline,
+          lastSeen: isOnline ? new Date().toISOString() : row.lastSeen
+        };
+      });
+
+      return enrichedRows; 
+
     } catch (err) {
       fastify.log.error(err);
       reply.code(500);
