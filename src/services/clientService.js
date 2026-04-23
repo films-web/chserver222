@@ -61,7 +61,7 @@ async function logNameChangeHistory(db, clientId, newName, server) {
      WHERE NOT EXISTS (
        SELECT 1 FROM names_history WHERE "clientId" = $1 AND name = $2
      )`,
-    [clientId, absoluteCleanName, server || null]
+    [clientId, newName, server || null]
   );
 
   if (rows.length > 0 && rows[0].name === newName) {
