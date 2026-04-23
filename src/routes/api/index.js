@@ -51,39 +51,44 @@ module.exports = async function (fastify, opts) {
   });
 
   fastify.get('/clients/search', async (request, reply) => {
-    const { guid } = request.query;
+    const { guid, name } = request.query;
 
-    try {
-      const query = `
-        SELECT 
-          c.id, 
-          c.hwid, 
-          c.guid as original_guid, 
-          cg.custom_guid,
-          -- Priority 1: Current In-Game Name (from Redis/History)
-          -- Priority 2: Custom GUID
-          -- Priority 3: Fallback to "UnnamedPlayer"
-          COALESCE(
-            (SELECT name FROM names_history WHERE client_id = c.id ORDER BY created_at DESC LIMIT 1),
-            cg.custom_guid, 
-            'UnnamedPlayer'
-          ) as display_name,
-          -- Fetch the actual last update time
-          (SELECT MAX(created_at) FROM names_history WHERE client_id = c.id) as last_seen
-        FROM clients c
-        LEFT JOIN custom_guids cg ON c.guid = cg.original_guid
-        WHERE c.guid ILIKE $1 
-          OR cg.custom_guid ILIKE $1 
-          OR c.hwid ILIKE $1
-        LIMIT 20;
-      `;
-
-      const { rows } = await fastify.db.query(query, [`%${guid}%`]);
-      return rows;
-    } catch (err) {
-      fastify.log.error(err);
-      return reply.status(500).send({ message: 'Internal Server Error' });
+    if (!guid && !name) {
+      reply.code(400);
+      throw new Error('You must provide a guid or name to search');
     }
+
+    let query = `
+      SELECT 
+        c.id, 
+        c.hwid, 
+        c.guid AS original_guid, 
+        COALESCE(cg.custom_guid, c.guid) AS active_guid,
+        c."currentName", 
+        c."lastSeen", 
+        c."createdAt" 
+      FROM clients c
+      LEFT JOIN custom_guids cg ON c.guid = cg.original_guid
+      WHERE 1=1`;
+    
+    let params = [];
+    let paramIndex = 1;
+
+    if (guid) {
+      query += ` AND (c.guid = $${paramIndex} OR cg.custom_guid = $${paramIndex})`;
+      params.push(guid);
+      paramIndex++;
+    }
+    
+    if (name) {
+      query += ` AND c."currentName" ILIKE $${paramIndex++}`;
+      params.push(`%${name}%`);
+    }
+
+    query += ` ORDER BY c."lastSeen" DESC LIMIT 50`;
+
+    const { rows } = await fastify.db.query(query, params);
+    return rows; 
   });
 
   fastify.get('/players/:id/names', async (request, reply) => {
