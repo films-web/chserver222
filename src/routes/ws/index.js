@@ -114,6 +114,7 @@ module.exports = async function (fastify, opts) {
 
         const handler = handlers[payload.action];
         if (handler) {
+          fastify.log.info(`Received WS action: ${payload.action} from client ${currentClientId}`);
           await handler(payload);
         } else {
           fastify.log.warn(`Unknown WS action: ${payload.action}`);
