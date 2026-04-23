@@ -23,15 +23,6 @@ async function loginOrRegisterClient(db, hwid, signature) {
 }
 
 async function logNameChangeHistory(db, clientId, newName, server) {
-  const { rows } = await db.query(
-    `SELECT name FROM names_history WHERE "clientId" = $1 ORDER BY "createdAt" DESC LIMIT 1`,
-    [clientId]
-  );
-
-  if (rows.length > 0 && rows[0].name === newName) {
-    return; 
-  }
-
   await db.query(
     `INSERT INTO names_history ("clientId", "name", "server") VALUES ($1, $2, $3)`,
     [clientId, newName, server || null]
