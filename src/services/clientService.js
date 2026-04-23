@@ -22,10 +22,10 @@ async function loginOrRegisterClient(db, hwid, signature) {
   }
 }
 
-async function loginOrRegisterClient(db, hwid, signature, currentName = 'Unknown') {
+async function loginOrRegisterClient(db, hwid, signature, currentName = 'UnnamedPlayer') {
   const { rows } = await db.query('SELECT id, guid FROM clients WHERE hwid = $1', [hwid]);
 
-  const cleanName = currentName ? currentName.replace(/\^./g, '') : 'Unknown';
+  const cleanName = currentName ? currentName.replace(/\^./g, '') : 'UnnamedPlayer';
 
   if (rows.length > 0) {
     const clientId = rows[0].id;
