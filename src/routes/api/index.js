@@ -58,24 +58,46 @@ module.exports = async function (fastify, opts) {
       throw new Error('You must provide a guid or name to search');
     }
 
-    let query = `SELECT id, hwid, guid, "currentName", "lastSeen", "createdAt" FROM clients WHERE 1=1`;
+    // 1. LEFT JOIN custom_guids
+    // 2. Use COALESCE to prefer custom_guid over original guid, and alias it as 'guid'
+    // 3. Fallback for currentName so 'null' names show as UnnamedPlayer
+    let query = `
+      SELECT 
+        c.id, 
+        c.hwid, 
+        COALESCE(cg.custom_guid, c.guid) AS guid, 
+        COALESCE(c."currentName", 'UnnamedPlayer') AS "currentName", 
+        c."lastSeen", 
+        c."createdAt" 
+      FROM clients c
+      LEFT JOIN custom_guids cg ON c.guid = cg.original_guid
+      WHERE 1=1
+    `;
+    
     let params = [];
     let paramIndex = 1;
 
     if (guid) {
-      query += ` AND guid = $${paramIndex++}`;
-      params.push(guid);
+      query += ` AND (c.guid ILIKE $${paramIndex} OR cg.custom_guid ILIKE $${paramIndex})`;
+      params.push(`%${guid}%`);
+      paramIndex++;
     }
     
     if (name) {
-      query += ` AND "currentName" ILIKE $${paramIndex++}`;
+      query += ` AND c."currentName" ILIKE $${paramIndex++}`;
       params.push(`%${name}%`);
     }
 
-    query += ` ORDER BY "lastSeen" DESC LIMIT 50`;
+    query += ` ORDER BY c."lastSeen" DESC LIMIT 50`;
 
-    const { rows } = await fastify.db.query(query, params);
-    return rows; 
+    try {
+      const { rows } = await fastify.db.query(query, params);
+      return rows; 
+    } catch (err) {
+      fastify.log.error(err);
+      reply.code(500);
+      throw new Error('Database search failed');
+    }
   });
 
   fastify.get('/players/:id/names', async (request, reply) => {
