@@ -122,7 +122,6 @@ module.exports = async function (fastify, opts) {
       const query = `
         SELECT 
           c.id, 
-          c.hwid, 
           c.guid AS original_guid, 
           cg.custom_guid,
           COALESCE(cg.custom_guid, c.guid) AS active_guid,
