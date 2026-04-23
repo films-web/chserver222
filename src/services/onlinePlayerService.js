@@ -22,6 +22,7 @@ async function getOnlinePlayers(redis, filters = {}) {
         clientId: keys[index].split(':')[1],
         guid: data.guid,
         name: data.name,
+        displayName: data.displayName,
         state: data.state,
         server: data.server,
         playerNum: data.playerNum
