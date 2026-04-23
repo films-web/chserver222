@@ -14,8 +14,8 @@ module.exports = async function handleUpdateState(fastify, connection, currentCl
     let changed = false;
     const updates = {};
 
-    if (state !== undefined && String(oldState) !== String(state)) {
-      updates.state = String(state);
+    if (state !== undefined && parseInt(oldState, 10) !== parseInt(state, 10)) {
+      updates.state = parseInt(state, 10);
       changed = true;
     }
 
@@ -24,8 +24,8 @@ module.exports = async function handleUpdateState(fastify, connection, currentCl
       changed = true;
     }
 
-    if (playerNum !== undefined && String(playerNum) !== String(oldPlayerNum)) {
-      updates.playerNum = playerNum;
+    if (playerNum !== undefined && parseInt(oldPlayerNum, 10) !== parseInt(playerNum, 10)) {
+      updates.playerNum = parseInt(playerNum, 10);
       changed = true;
     }
 
@@ -41,12 +41,12 @@ module.exports = async function handleUpdateState(fastify, connection, currentCl
     if (name && name !== oldName) {
       logNameChangeHistory(
         fastify.db, currentClientId, name, server || oldServer
-      ).catch(err => fastify.log.error(`Failed to log name history for ${currentClientId}:`, err));
+      ).catch(err => fastify.log.error(`Failed to log name history:`, err));
     }
     
     connection.sendSuccess('update_state');
 
   } catch (err) {
-    connection.sendError('update_state', 'Internal server error processing state update.');
+    connection.sendError('update_state', 'Internal server error during state update.');
   }
 };
