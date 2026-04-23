@@ -53,10 +53,6 @@ module.exports = async function (fastify, opts) {
   fastify.get('/clients/search', async (request, reply) => {
     const { guid } = request.query;
 
-    if (!guid) {
-      return reply.status(400).send({ message: 'Search term is required' });
-    }
-
     try {
       const query = `
         SELECT 
@@ -64,7 +60,16 @@ module.exports = async function (fastify, opts) {
           c.hwid, 
           c.guid as original_guid, 
           cg.custom_guid,
-          COALESCE(cg.custom_guid, c.guid) as active_guid
+          -- Priority 1: Current In-Game Name (from Redis/History)
+          -- Priority 2: Custom GUID
+          -- Priority 3: Fallback to "UnnamedPlayer"
+          COALESCE(
+            (SELECT name FROM names_history WHERE client_id = c.id ORDER BY created_at DESC LIMIT 1),
+            cg.custom_guid, 
+            'UnnamedPlayer'
+          ) as display_name,
+          -- Fetch the actual last update time
+          (SELECT MAX(created_at) FROM names_history WHERE client_id = c.id) as last_seen
         FROM clients c
         LEFT JOIN custom_guids cg ON c.guid = cg.original_guid
         WHERE c.guid ILIKE $1 
