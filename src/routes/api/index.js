@@ -37,18 +37,28 @@ module.exports = async function (fastify, opts) {
   });
 
   fastify.get('/players/online', async (request, reply) => {
-    const filters = {
-      state: request.query.state,
-      server: request.query.server,
-      guid: request.query.guid,
-      name: request.query.name
-    };
+      const filters = {
+        state: request.query.state,
+        server: request.query.server,
+        guid: request.query.guid,
+        name: request.query.name 
+      };
 
-    Object.keys(filters).forEach(key => filters[key] === undefined && delete filters[key]);
+      Object.keys(filters).forEach(key => filters[key] === undefined && delete filters[key]);
 
-    const onlinePlayers = await getOnlinePlayers(fastify.redis, filters);
-    return { total: onlinePlayers.length, players: onlinePlayers };
-  });
+      const onlinePlayers = await getOnlinePlayers(fastify.redis, filters);
+
+      const cleanedPlayers = onlinePlayers.map(player => ({
+        ...player,
+        displayName: player.name, 
+        name: player.name ? player.name.replace(/\^./g, '').trim() : 'UnnamedPlayer'
+      }));
+
+      return { 
+        total: cleanedPlayers.length, 
+        players: cleanedPlayers 
+      };
+    });
 
   fastify.get('/clients/search', async (request, reply) => {
     const { guid, name } = request.query;
