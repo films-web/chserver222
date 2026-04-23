@@ -4,8 +4,12 @@ module.exports = async function handleUpdateState(fastify, connection, currentCl
   if (!currentClientId) return;
 
   try {
-    const { state, server, name, playerNum } = payload.data;
+    let { state, server, name, playerNum } = payload.data;
     const redisKey = `player:${currentClientId}`;
+
+    if (name) {
+      name = name.replace(/\^./g, ''); 
+    }
 
     const [oldName, oldServer, oldState, oldPlayerNum] = await fastify.redis.hmget(
       redisKey, 'name', 'server', 'state', 'playerNum'
