@@ -115,6 +115,40 @@ module.exports = async function (fastify, opts) {
     }
   });
 
+  fastify.get('/clients/:id', async (request, reply) => {
+    const { id } = request.params;
+
+    try {
+      const query = `
+        SELECT 
+          c.id, 
+          c.hwid, 
+          c.guid AS original_guid, 
+          cg.custom_guid,
+          COALESCE(cg.custom_guid, c.guid) AS active_guid,
+          COALESCE(c."currentName", 'UnnamedPlayer') AS "currentName", 
+          c."lastSeen", 
+          c."createdAt" 
+        FROM clients c
+        LEFT JOIN custom_guids cg ON c.guid = cg.original_guid
+        WHERE c.id = $1
+      `;
+      
+      const { rows } = await fastify.db.query(query, [id]);
+      
+      if (rows.length === 0) {
+        reply.code(404);
+        throw new Error('Player not found');
+      }
+      
+      return rows[0];
+    } catch (err) {
+      fastify.log.error(err);
+      reply.code(500);
+      throw new Error('Internal Server Error');
+    }
+  });
+
   fastify.get('/players/:id/names', async (request, reply) => {
     const { rows } = await fastify.db.query(
       'SELECT name, server, "createdAt" FROM names_history WHERE "clientId" = $1 ORDER BY "createdAt" DESC',
