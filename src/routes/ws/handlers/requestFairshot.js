@@ -4,7 +4,8 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
     try {
         if (!currentClientId) return;
 
-        const requester = await onlinePlayerService.getPlayerState(currentClientId);
+        const requester = await onlinePlayerService.getPlayerState(fastify.redis, currentClientId);
+        
         if (!requester || !requester.server) return;
 
         const targetIdentifier = payload.target;

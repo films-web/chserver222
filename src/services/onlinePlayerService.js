@@ -46,4 +46,30 @@ async function getOnlinePlayers(redis, filters = {}) {
   return players;
 }
 
-module.exports = { getOnlinePlayers };
+/**
+ * Fetches a single online player directly from Redis using their clientId.
+ * @param {object} redis - The Fastify Redis instance
+ * @param {string|number} clientId - The ID of the client to fetch
+ * @returns {Promise<object|null>} The player object, or null if offline/not found
+ */
+async function getPlayerState(redis, clientId) {
+  if (!clientId) return null;
+
+  const key = `player:${clientId}`;
+  const data = await redis.hgetall(key);
+
+  if (!data || Object.keys(data).length === 0) {
+    return null;
+  }
+
+  return {
+    clientId: String(clientId),
+    guid: data.guid,
+    name: data.name,
+    state: data.state,
+    server: data.server,
+    playerNum: data.playerNum
+  };
+}
+
+module.exports = { getOnlinePlayers, getPlayerState };
