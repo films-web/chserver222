@@ -6,8 +6,7 @@ module.exports = async function handleAuth(fastify, connection, payload) {
   const { hwid, signature, currentName = 'Unknown' } = payload.data;
 
   if (!isValidSignature(hwid, signature)) {
-    fastify.log.warn(`[SECURITY] Invalid signature from HWID: ${hwid}.`);
-    connection.socket.send(JSON.stringify({ status: 'error', message: 'Invalid signature.' }));
+    connection.sendError('auth_result', 'Invalid signature.');
     connection.socket.close(1008, "Policy Violation"); 
     return null;
   }
@@ -30,13 +29,7 @@ module.exports = async function handleAuth(fastify, connection, payload) {
   const timeoutSec = parseInt(process.env.HEARTBEAT_TIMEOUT_SEC || '60', 10);
   await fastify.redis.expire(redisKey, timeoutSec);
 
-  connection.socket.send(JSON.stringify({
-    action: 'auth_result',
-    status: 'success',
-    data: {
-      guid: finalActiveGuid 
-    }
-  }));
+  connection.sendSuccess('auth_result', { guid: finalActiveGuid });
   
   return clientId;
 };

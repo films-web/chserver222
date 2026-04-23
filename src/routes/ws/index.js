@@ -1,3 +1,5 @@
+const attachWsInterceptor = require('../../utils/wsInterceptor');
+
 const handleAuth = require('./handlers/auth');
 const handleHeartbeat = require('./handlers/heartbeat');
 const handleUpdateState = require('./handlers/updateState');
@@ -12,9 +14,10 @@ module.exports = async function (fastify, opts) {
   fastify.get('/connect', { websocket: true }, (rawSocket, req) => {
 
     const connection = { socket: rawSocket };
-
     let currentClientId = null;
     let isAuthed = false;
+
+    attachWsInterceptor(fastify, connection, currentClientId);
 
     let tokens = 50;
     const refillRate = 50;
@@ -41,41 +44,34 @@ module.exports = async function (fastify, opts) {
         if (currentClientId) {
           isAuthed = true;
           clearTimeout(authTimeout);
+          attachWsInterceptor(fastify, connection, currentClientId);
         }
       },
-
       heartbeat: async () => {
         if (!isAuthed) return;
         lastHeartbeat = Date.now();
         await handleHeartbeat(fastify, connection, currentClientId);
       },
-
       update_state: async (payload) => {
         if (!isAuthed) return;
-        
         await handleUpdateState(fastify, connection, currentClientId, payload)
       },
-
       pk3_whitelist: async () => {
         if (!isAuthed) return;
         await handleRequestWhitelist(fastify, connection, currentClientId);
       },
-
       payload: async () => {
         if (!isAuthed) return;
         await handleRequestPayload(fastify, connection, currentClientId);
       },
-      
       get_player_list: async () => {
         if (!isAuthed) return;
         await handleRequestAcStatus(fastify, connection, currentClientId);
       },
-
       request_guid: async (payload) => {
         if (!isAuthed) return;
         await handleRequestGuid(fastify, connection, currentClientId, payload);
       },
-
       request_fairshot: async (payload) => {
         if (!isAuthed) return;
         await handleRequestFairshot(fastify, connection, currentClientId, payload);
@@ -84,14 +80,13 @@ module.exports = async function (fastify, opts) {
 
     connection.socket.on('message', async (message) => {
       try {
-        // 🚫 size limit
         if (message.length > 2024) {
           return connection.socket.terminate();
         }
 
-        // 🚫 token bucket limiter
         if (tokens <= 0) {
-          return connection.socket.terminate();
+          fastify.log.warn(`Rate limit exceeded for client: ${currentClientId}`);
+          return;
         }
         tokens--;
 
@@ -102,7 +97,6 @@ module.exports = async function (fastify, opts) {
           return;
         }
 
-        // 🚫 basic validation
         if (!payload || typeof payload.action !== 'string') {
           return;
         }
@@ -112,11 +106,11 @@ module.exports = async function (fastify, opts) {
           fastify.log.info(`Received WS action: ${payload.action} from client ${currentClientId}`);
           await handler(payload);
         } else {
-          fastify.log.warn(`Unknown WS action: ${payload.action}`);
+          connection.sendError(payload.action, `Unknown WS action: ${payload.action}`);
         }
 
       } catch (err) {
-        fastify.log.error('WS Message Error:', err.message);
+        connection.sendError('unknown', 'Internal Server Error during message processing.');
       }
     });
 

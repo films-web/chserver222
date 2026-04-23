@@ -1,0 +1,33 @@
+function attachWsInterceptor(fastify, connection, clientId) {
+    const originalSend = connection.socket.send.bind(connection.socket);
+
+    connection.sendSuccess = (action, data = null) => {
+        const response = {
+            action: action,
+            status: 'success',
+            data: data
+        };
+        originalSend(JSON.stringify(response));
+    };
+
+    connection.sendError = (action, message) => {
+        if (clientId) {
+            fastify.log.error(`[WS Error - Client ${clientId}] Action: ${action} | ${message}`);
+        } else {
+            fastify.log.error(`[WS Error - Unauthenticated] Action: ${action} | ${message}`);
+        }
+        
+        const response = {
+            action: action,
+            status: 'error',
+            message: message || 'Internal Server Error'
+        };
+        originalSend(JSON.stringify(response));
+    };
+
+    connection.sendRawJSON = (payload) => {
+        originalSend(JSON.stringify(payload));
+    };
+}
+
+module.exports = attachWsInterceptor;

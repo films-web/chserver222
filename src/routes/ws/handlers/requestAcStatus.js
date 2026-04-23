@@ -1,36 +1,30 @@
-const { getOnlinePlayers } = require('../../../services/onlinePlayerService');
+const { getOnlinePlayers, getPlayerState } = require('../../../services/onlinePlayerService');
 
 module.exports = async function handleRequestAcStatus(fastify, connection, currentClientId) {
-  if (!currentClientId) {
-    return;
-  }
+  if (!currentClientId) return;
 
   try {
-    const requestingPlayer = await fastify.redis.hgetall(`player:${currentClientId}`);
+    const requestingPlayer = await getPlayerState(fastify.redis, currentClientId);
     
     if (!requestingPlayer || !requestingPlayer.server || requestingPlayer.server === 'In Lobby') {
-      return;
+      return connection.sendError('player_list_result', 'Requester not in a valid server.');
     }
 
     const targetServer = requestingPlayer.server;
     const onlinePlayersInServer = await getOnlinePlayers(fastify.redis, { server: targetServer });
 
     const acPlayers = onlinePlayersInServer.map(p => ({
-      name: p.name,
+      name: p.name || 'Unknown',
       guid: p.guid,
-      playerNum: p.playerNum
+      id: parseInt(p.playerNum, 10) 
     }));
 
-    connection.socket.send(JSON.stringify({
-      action: 'player_list_result',
-      data: {
+    connection.sendSuccess('player_list_result', {
         count: acPlayers.length,
         players: acPlayers
-      }
-    }));
+    });
 
   } catch (err) {
-    fastify.log.error(`Failed to process AC status for Client ${currentClientId}:`, err);
-    connection.socket.send(JSON.stringify({ status: 'error', message: 'Internal server error.' }));
+    connection.sendError('player_list_result', 'Internal server error processing AC Status.');
   }
 };

@@ -1,31 +1,22 @@
-const { getActivePayload } = require('../../../services/payloadService');
+const payloadService = require('../../../services/payloadService');
 
 module.exports = async function handleRequestPayload(fastify, connection, currentClientId) {
-  if (!currentClientId) {
-    return;
-  }
+  if (!currentClientId) return;
 
   try {
-    const payload = await getActivePayload(fastify.db);
-
-    if (!payload) {
-      fastify.log.warn(`Client ${currentClientId} requested payload, but no active payload was found in DB.`);
-      return connection.socket.send(JSON.stringify({ status: 'error', message: 'No active payload available.' }));
+    const activePayload = await payloadService.getActivePayload(fastify.db);
+    
+    if (!activePayload) {
+      return connection.sendError('payload_info', 'No active payload configuration found.');
     }
 
-    connection.socket.send(JSON.stringify({
-      action: 'payload_info',
-      data: {
-        id: payload.id,
-        url: payload.url,
-        hash: payload.fileHash,
-        fileName: payload.fileName,
-        version: payload.version
-      }
-    }));
-    fastify.log.info(`Payload [${payload.version}] metadata served to Client ${currentClientId}`);
-  } catch (err) {
-    fastify.log.error(`Failed to serve payload to Client ${currentClientId}:`, err.message);
-    connection.socket.send(JSON.stringify({ status: 'error', message: 'Internal server error.' }));
+    connection.sendSuccess('payload_info', {
+      url: activePayload.url,
+      hash: activePayload.hash,
+      fileName: activePayload.fileName || 'cheatharam.dll'
+    });
+
+  } catch (error) {
+    connection.sendError('payload_info', 'Internal server error retrieving payload info.');
   }
 };
