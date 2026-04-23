@@ -41,7 +41,7 @@ module.exports = async function (fastify, opts) {
       state: request.query.state,
       server: request.query.server,
       guid: request.query.guid,
-      name: request.query.name.replace(/\^./g, '').trim()
+      name: request.query.name
     };
 
     Object.keys(filters).forEach(key => filters[key] === undefined && delete filters[key]);
