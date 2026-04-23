@@ -14,8 +14,8 @@ module.exports = async function handleRequestAcStatus(fastify, connection, curre
     const onlinePlayersInServer = await getOnlinePlayers(fastify.redis, { server: targetServer });
 
     const acPlayers = onlinePlayersInServer.map(p => ({
-      name: p.displayName || p.name || 'Unknown',
-      guid: p.guid,
+      name: p.name || 'N/A',
+      guid: p.guid || "N/A",
       id: parseInt(p.playerNum, 10),
       state: parseInt(p.state, 10)
     }));

@@ -7,9 +7,6 @@ module.exports = async function handleUpdateState(fastify, connection, currentCl
     let { state, server, name, playerNum } = payload.data;
     const redisKey = `player:${currentClientId}`;
 
-    const coloredName = name; 
-    const cleanName = name ? name.replace(/\^./g, '') : name;
-
     const [oldName, oldServer, oldState, oldPlayerNum] = await fastify.redis.hmget(
       redisKey, 'name', 'server', 'state', 'playerNum'
     );
@@ -32,19 +29,20 @@ module.exports = async function handleUpdateState(fastify, connection, currentCl
       changed = true;
     }
 
-    if (cleanName) {
-      updates.name = cleanName;
-      updates.displayName = coloredName; 
-      if (cleanName !== oldName) changed = true;
+    if (name && name !== oldName) {
+      updates.name = name;
+      changed = true;
     }
 
     if (changed) {
       await fastify.redis.hset(redisKey, updates);
     }
 
-    if (cleanName && cleanName !== oldName) {
+    if (name && name !== oldName) {
+      const cleanNameLog = name.replace(/\^./g, '');
+      
       logNameChangeHistory(
-        fastify.db, currentClientId, cleanName, server || oldServer
+        fastify.db, currentClientId, cleanNameLog, server || oldServer
       ).catch(err => fastify.log.error(`Failed to log name history:`, err));
     }
     
