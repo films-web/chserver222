@@ -3,7 +3,7 @@ const { loginOrRegisterClient } = require('../../../services/clientService');
 const { getSpoofedGuid } = require('../../../services/guidService');
 
 module.exports = async function handleAuth(fastify, connection, payload) {
-  const { hwid, signature, name = 'UnnamedPlayer' } = payload.data;
+  const { hwid, signature, name = 'Unknown' } = payload.data;
 
   if (!isValidSignature(hwid, signature)) {
     connection.sendError('auth_result', 'Invalid signature.');
