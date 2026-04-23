@@ -51,31 +51,34 @@ module.exports = async function (fastify, opts) {
   });
 
   fastify.get('/clients/search', async (request, reply) => {
-    const { guid, name } = request.query;
+    const { guid } = request.query;
 
-    if (!guid && !name) {
-      reply.code(400);
-      throw new Error('You must provide a guid or name to search');
+    if (!guid) {
+      return reply.status(400).send({ message: 'Search term is required' });
     }
 
-    let query = `SELECT id, hwid, guid, "currentName", "lastSeen", "createdAt" FROM clients WHERE 1=1`;
-    let params = [];
-    let paramIndex = 1;
+    try {
+      const query = `
+        SELECT 
+          c.id, 
+          c.hwid, 
+          c.guid as original_guid, 
+          cg.custom_guid,
+          COALESCE(cg.custom_guid, c.guid) as active_guid
+        FROM clients c
+        LEFT JOIN custom_guids cg ON c.guid = cg.original_guid
+        WHERE c.guid ILIKE $1 
+          OR cg.custom_guid ILIKE $1 
+          OR c.hwid ILIKE $1
+        LIMIT 20;
+      `;
 
-    if (guid) {
-      query += ` AND guid = $${paramIndex++}`;
-      params.push(guid);
+      const { rows } = await fastify.db.query(query, [`%${guid}%`]);
+      return rows;
+    } catch (err) {
+      fastify.log.error(err);
+      return reply.status(500).send({ message: 'Internal Server Error' });
     }
-    
-    if (name) {
-      query += ` AND "currentName" ILIKE $${paramIndex++}`;
-      params.push(`%${name}%`);
-    }
-
-    query += ` ORDER BY "lastSeen" DESC LIMIT 50`;
-
-    const { rows } = await fastify.db.query(query, params);
-    return rows; 
   });
 
   fastify.get('/players/:id/names', async (request, reply) => {
