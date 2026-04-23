@@ -52,7 +52,7 @@ async function logNameChangeHistory(db, clientId, newName, server) {
 
   await db.query(
     `UPDATE clients SET "currentName" = $1 WHERE id = $2`,
-    [absoluteCleanName, clientId]
+    [newName, clientId]
   );
 
   await db.query(
