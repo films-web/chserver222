@@ -22,7 +22,7 @@ module.exports = async function handleRequestAcStatus(fastify, connection, curre
     }));
 
     connection.socket.send(JSON.stringify({
-      action: 'ac_status_result',
+      action: 'player_list_result',
       data: {
         count: acPlayers.length,
         players: acPlayers

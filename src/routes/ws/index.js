@@ -65,12 +65,7 @@ module.exports = async function (fastify, opts) {
         if (!isAuthed) return;
         await handleRequestPayload(fastify, connection, currentClientId);
       },
-
-      ac_status: async () => {
-        if (!isAuthed) return;
-        await handleRequestAcStatus(fastify, connection, currentClientId);
-      },
-
+      
       get_player_list: async () => {
         if (!isAuthed) return;
         await handleRequestAcStatus(fastify, connection, currentClientId);
