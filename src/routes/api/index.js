@@ -58,34 +58,21 @@ module.exports = async function (fastify, opts) {
       throw new Error('You must provide a guid or name to search');
     }
 
-    let query = `
-      SELECT 
-        c.id, 
-        c.hwid, 
-        c.guid AS original_guid, 
-        COALESCE(cg.custom_guid, c.guid) AS active_guid,
-        c."currentName", 
-        c."lastSeen", 
-        c."createdAt" 
-      FROM clients c
-      LEFT JOIN custom_guids cg ON c.guid = cg.original_guid
-      WHERE 1=1`;
-    
+    let query = `SELECT id, hwid, guid, "currentName", "lastSeen", "createdAt" FROM clients WHERE 1=1`;
     let params = [];
     let paramIndex = 1;
 
     if (guid) {
-      query += ` AND (c.guid = $${paramIndex} OR cg.custom_guid = $${paramIndex})`;
+      query += ` AND guid = $${paramIndex++}`;
       params.push(guid);
-      paramIndex++;
     }
     
     if (name) {
-      query += ` AND c."currentName" ILIKE $${paramIndex++}`;
+      query += ` AND "currentName" ILIKE $${paramIndex++}`;
       params.push(`%${name}%`);
     }
 
-    query += ` ORDER BY c."lastSeen" DESC LIMIT 50`;
+    query += ` ORDER BY "lastSeen" DESC LIMIT 50`;
 
     const { rows } = await fastify.db.query(query, params);
     return rows; 
