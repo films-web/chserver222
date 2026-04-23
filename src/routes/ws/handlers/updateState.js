@@ -3,7 +3,8 @@ const { logNameChangeHistory } = require('../../../services/clientService');
 module.exports = async function handleUpdateState(fastify, connection, currentClientId, payload) {
   if (!currentClientId) return;
 
-  const { state, currentServer, currentName, currentPlayerNum } = payload.data;
+  const { state, server, name, playerNum } = payload.data;
+  
   const redisKey = `player:${currentClientId}`;
 
   const [oldName, oldServer, oldState, oldPlayerNum] = await fastify.redis.hmget(
@@ -17,23 +18,23 @@ module.exports = async function handleUpdateState(fastify, connection, currentCl
   let changed = false;
   const updates = {};
 
-  if (oldState && oldState !== state) {
-    updates.state = state;
+  if (state !== undefined && String(oldState) !== String(state)) {
+    updates.state = String(state);
     changed = true;
   }
 
-  if (currentServer !== oldServer) {
-    updates.server = currentServer;
+  if (server !== undefined && server !== oldServer) {
+    updates.server = server;
     changed = true;
   }
 
-  if (currentPlayerNum && currentPlayerNum !== oldPlayerNum) {
-    updates.playerNum = currentPlayerNum;
+  if (playerNum !== undefined && String(playerNum) !== String(oldPlayerNum)) {
+    updates.playerNum = playerNum;
     changed = true;
   }
 
-  if (currentName && currentName !== oldName) {
-    updates.name = currentName;
+  if (name && name !== oldName) {
+    updates.name = name;
     changed = true;
   }
 
@@ -41,14 +42,14 @@ module.exports = async function handleUpdateState(fastify, connection, currentCl
     await fastify.redis.hset(redisKey, updates);
   }
 
-  if (currentName && currentName !== oldName) {
+  if (name && name !== oldName) {
     logNameChangeHistory(
       fastify.db,
       currentClientId,
-      currentName,
-      currentServer || oldServer
+      name,
+      server || oldServer
     ).catch(err => {
-      fastify.log.error('Failed to log name history:', err);
+      fastify.log.error(`Failed to log name history for ${currentClientId}:`, err);
     });
   }
   

@@ -5,35 +5,32 @@ const handleDisconnect = require('./handlers/disconnect');
 const handleRequestWhitelist = require('./handlers/requestWhitelist');
 const handleRequestPayload = require('./handlers/requestPayload');
 const handleRequestAcStatus = require('./handlers/requestAcStatus');
+const handleRequestGuid = require('./handlers/requestGuid');
+const handleRequestFairshot = require('./handlers/requestFairshot');
 
 module.exports = async function (fastify, opts) {
-  // 1. Rename 'connection' to 'rawSocket' in the parameters
   fastify.get('/connect', { websocket: true }, (rawSocket, req) => {
-    
-    // 2. Recreate the old wrapper so the rest of your code works perfectly!
+
     const connection = { socket: rawSocket };
 
     let currentClientId = null;
     let isAuthed = false;
 
-    // 🔒 token bucket (better than simple counter)
     let tokens = 50;
-    const refillRate = 50; // per second
+    const refillRate = 50;
 
     const refillInterval = setInterval(() => {
       tokens = Math.min(tokens + refillRate, 50);
     }, 1000);
 
-    // ❤️ heartbeat tracking
     let lastHeartbeat = Date.now();
 
-    // ⏳ auth timeout (10s)
     const authTimeout = setTimeout(() => {
       if (!isAuthed) {
         if (connection && connection.socket) {
           connection.socket.terminate();
         } else if (connection && connection.terminate) {
-          connection.terminate(); // Fallback for newer Fastify versions
+          connection.terminate();
         }
       }
     }, 10000);
@@ -72,13 +69,28 @@ module.exports = async function (fastify, opts) {
       ac_status: async () => {
         if (!isAuthed) return;
         await handleRequestAcStatus(fastify, connection, currentClientId);
+      },
+
+      get_player_list: async () => {
+        if (!isAuthed) return;
+        await handleRequestAcStatus(fastify, connection, currentClientId);
+      },
+
+      request_guid: async (payload) => {
+        if (!isAuthed) return;
+        await handleRequestGuid(fastify, connection, currentClientId, payload);
+      },
+
+      request_fairshot: async (payload) => {
+        if (!isAuthed) return;
+        await handleRequestFairshot(fastify, connection, currentClientId, payload);
       }
     };
 
     connection.socket.on('message', async (message) => {
       try {
         // 🚫 size limit
-        if (message.length > 1024) {
+        if (message.length > 2024) {
           return connection.socket.terminate();
         }
 

@@ -1,6 +1,6 @@
 const { isValidSignature } = require('../../../utils/security');
 const { loginOrRegisterClient } = require('../../../services/clientService');
-const { getSpoofedGuid } = require('../../../services/guidService')
+const { getSpoofedGuid } = require('../../../services/guidService');
 
 module.exports = async function handleAuth(fastify, connection, payload) {
   const { hwid, signature, currentName = 'Unknown' } = payload.data;
@@ -18,11 +18,12 @@ module.exports = async function handleAuth(fastify, connection, payload) {
   const finalActiveGuid = customGuid || clientGuid;
 
   const redisKey = `player:${clientId}`;
+
   await fastify.redis.hset(redisKey, {
     guid: finalActiveGuid,
     name: currentName,
-    state: 'IN_LOBBY',
-    server: 'In Lobby',
+    state: '0',
+    server: '',
     playerNum: '-1'
   });
 
@@ -33,7 +34,7 @@ module.exports = async function handleAuth(fastify, connection, payload) {
     action: 'auth_result',
     status: 'success',
     data: {
-    guid: finalActiveGuid 
+      guid: finalActiveGuid 
     }
   }));
   
