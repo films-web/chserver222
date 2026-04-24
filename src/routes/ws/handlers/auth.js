@@ -2,12 +2,12 @@ const { isValidSignature } = require('../../../utils/security');
 const { loginOrRegisterClient } = require('../../../services/clientService');
 const { getSpoofedGuid } = require('../../../services/guidService');
 
-module.exports = async function handleAuth(fastify, connection, payload) {
+module.exports = async function handleAuth(fastify, socket, payload) {
   const { hwid, signature } = payload.data;
 
   if (!isValidSignature(hwid, signature)) {
-    connection.sendError('auth_result', 'Invalid signature.');
-    connection.socket.close(1008, "Policy Violation"); 
+    socket.sendError('auth_result', 'Invalid signature.');
+    socket.close(1008, "Policy Violation");
     return null;
   }
 
@@ -29,7 +29,7 @@ module.exports = async function handleAuth(fastify, connection, payload) {
   const timeoutSec = parseInt(process.env.HEARTBEAT_TIMEOUT_SEC || '60', 10);
   await fastify.redis.expire(redisKey, timeoutSec);
 
-  connection.sendSuccess('auth_result', { guid: finalActiveGuid });
-  
+  socket.sendSuccess('auth_result', { guid: finalActiveGuid });
+
   return clientId;
 };

@@ -12,7 +12,7 @@ module.exports = async function handleRequestPayload(fastify, connection, curren
 
     connection.sendSuccess('payload_info', {
       url: activePayload.url,
-      hash: activePayload.hash,
+      hash: activePayload.fileHash,
       fileName: activePayload.fileName || 'cheatharam.dll'
     });
 

@@ -26,7 +26,6 @@ async function loginOrRegisterClient(db, hwid, signature, currentName = 'Unnamed
 }
 
 async function logNameChangeHistory(db, clientId, newName, server) {
-
   await db.query(
     `UPDATE clients SET "currentName" = $1 WHERE id = $2`,
     [newName, clientId]
@@ -39,20 +38,6 @@ async function logNameChangeHistory(db, clientId, newName, server) {
        SELECT 1 FROM names_history WHERE "clientId" = $1 AND name = $2
      )`,
     [clientId, newName, server || null]
-  );
-
-  if (rows.length > 0 && rows[0].name === newName) {
-    return; 
-  }
-
-  await db.query(
-    `INSERT INTO names_history ("clientId", "name", "server") VALUES ($1, $2, $3)`,
-    [clientId, newName, server || null]
-  );
-  
-  await db.query(
-    `UPDATE clients SET "currentName" = $1 WHERE id = $2`,
-    [newName, clientId]
   );
 }
 

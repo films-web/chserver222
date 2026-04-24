@@ -79,7 +79,7 @@ module.exports = async function (fastify, opts) {
 
     connection.socket.on('message', async (message) => {
       try {
-        if (message.length > 2024) {
+        if (message.length > 2048) {
           return connection.socket.terminate();
         }
 
@@ -114,7 +114,8 @@ module.exports = async function (fastify, opts) {
     });
 
     const heartbeatInterval = setInterval(() => {
-      if (Date.now() - lastHeartbeat > 60000) {
+      const timeoutMs = parseInt(process.env.HEARTBEAT_TIMEOUT_SEC || '60', 10) * 1000;
+      if (Date.now() - lastHeartbeat > timeoutMs) {
         connection.socket.terminate();
       }
     }, 5000);
