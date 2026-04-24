@@ -1,14 +1,5 @@
-// src/utils/wsInterceptor.js
 function attachWsInterceptor(fastify, connection, clientId) {
-    // Robust check for the socket object
-    const socket = connection.socket || connection; 
-    
-    if (!socket || typeof socket.send !== 'function') {
-        fastify.log.error(`[WS Interceptor] Failed to attach: socket.send is not a function`);
-        return;
-    }
-
-    const originalSend = socket.send.bind(socket);
+    const originalSend = connection.socket.send.bind(connection.socket);
 
     connection.sendSuccess = (action, data = null) => {
         const response = {

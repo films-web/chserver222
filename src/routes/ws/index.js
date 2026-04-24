@@ -1,4 +1,5 @@
 const attachWsInterceptor = require('../../utils/wsInterceptor');
+
 const handleAuth = require('./handlers/auth');
 const handleHeartbeat = require('./handlers/heartbeat');
 const handleUpdateState = require('./handlers/updateState');
@@ -10,33 +11,29 @@ const handleRequestGuid = require('./handlers/requestGuid');
 const handleRequestFairshot = require('./handlers/requestFairshot');
 
 module.exports = async function (fastify, opts) {
-  // In Fastify v11, 'connection' is a SocketStream object
   fastify.get('/connect', { websocket: true }, (connection, req) => {
-    
-    // Safety check: extract the raw websocket
-    const socket = connection.socket;
-    if (!socket) {
-      fastify.log.error("WebSocket connection failed: No socket found in stream.");
-      return connection.destroy();
-    }
 
     let currentClientId = null;
     let isAuthed = false;
 
-    // Attach our helpers to the SocketStream so handlers can use connection.sendSuccess()
     attachWsInterceptor(fastify, connection, currentClientId);
 
-    let tokens = 100; // Increased burst
+    let tokens = 50;
     const refillRate = 50;
+
     const refillInterval = setInterval(() => {
-      tokens = Math.min(tokens + refillRate, 100);
+      tokens = Math.min(tokens + refillRate, 50);
     }, 1000);
 
     let lastHeartbeat = Date.now();
 
     const authTimeout = setTimeout(() => {
       if (!isAuthed) {
-        socket.terminate();
+        if (connection && connection.socket) {
+          connection.socket.terminate();
+        } else if (connection && connection.terminate) {
+          connection.terminate();
+        }
       }
     }, 10000);
 
@@ -46,7 +43,6 @@ module.exports = async function (fastify, opts) {
         if (currentClientId) {
           isAuthed = true;
           clearTimeout(authTimeout);
-          // Re-attach with the actual ClientID for better logging
           attachWsInterceptor(fastify, connection, currentClientId);
         }
       },
@@ -57,7 +53,7 @@ module.exports = async function (fastify, opts) {
       },
       update_state: async (payload) => {
         if (!isAuthed) return;
-        await handleUpdateState(fastify, connection, currentClientId, payload);
+        await handleUpdateState(fastify, connection, currentClientId, payload)
       },
       pk3_whitelist: async () => {
         if (!isAuthed) return;
@@ -81,44 +77,54 @@ module.exports = async function (fastify, opts) {
       }
     };
 
-    // Use 'socket' directly for the event listener
-    socket.on('message', async (message) => {
+    connection.socket.on('message', async (message) => {
       try {
-        if (message.length > 4096) return socket.terminate();
+        if (message.length > 2024) {
+          return connection.socket.terminate();
+        }
 
-        if (tokens <= 0) return;
+        if (tokens <= 0) {
+          fastify.log.warn(`Rate limit exceeded for client: ${currentClientId}`);
+          return;
+        }
         tokens--;
 
         let payload;
         try {
           payload = JSON.parse(message.toString());
-        } catch { return; }
+        } catch {
+          return;
+        }
 
-        if (!payload || typeof payload.action !== 'string') return;
+        if (!payload || typeof payload.action !== 'string') {
+          return;
+        }
 
         const handler = handlers[payload.action];
         if (handler) {
+          fastify.log.info(`Received WS action: ${payload.action} from client ${currentClientId}`);
           await handler(payload);
         } else {
-          connection.sendError(payload.action, `Unknown action: ${payload.action}`);
+          connection.sendError(payload.action, `Unknown WS action: ${payload.action}`);
         }
+
       } catch (err) {
-        fastify.log.error(err);
-        if (connection.sendError) connection.sendError('unknown', 'Internal error');
+        connection.sendError('unknown', 'Internal Server Error during message processing.');
       }
     });
 
     const heartbeatInterval = setInterval(() => {
       if (Date.now() - lastHeartbeat > 60000) {
-        socket.terminate();
+        connection.socket.terminate();
       }
     }, 5000);
 
-    socket.on('close', async () => {
+    connection.socket.on('close', async () => {
       clearInterval(refillInterval);
       clearInterval(heartbeatInterval);
       clearTimeout(authTimeout);
-      if (currentClientId) await handleDisconnect(fastify, currentClientId);
+
+      await handleDisconnect(fastify, currentClientId);
     });
   });
 };
