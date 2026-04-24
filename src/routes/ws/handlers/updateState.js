@@ -1,6 +1,6 @@
 const { logNameChangeHistory } = require('../../../services/clientService');
 
-module.exports = async function handleUpdateState(fastify, connection, currentClientId, payload) {
+module.exports = async function handleUpdateState(fastify, socket, currentClientId, payload) {
   if (!currentClientId) return;
 
   try {
@@ -40,17 +40,17 @@ module.exports = async function handleUpdateState(fastify, connection, currentCl
 
     if (name && name !== oldName) {
       const cleanNameLog = name.replace(/\^./g, '').trim();
-      
-      if (cleanNameLog !== ""){
+
+      if (cleanNameLog !== "") {
         logNameChangeHistory(
           fastify.db, currentClientId, cleanNameLog, server || oldServer
         ).catch(err => fastify.log.error(`Failed to log name history:`, err));
       }
     }
-    
-    connection.sendSuccess('update_state');
+
+    socket.sendSuccess('update_state');
 
   } catch (err) {
-    connection.sendError('update_state', 'Internal server error during state update.');
+    socket.sendError('update_state', 'Internal server error during state update.');
   }
 };
