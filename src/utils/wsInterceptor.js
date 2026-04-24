@@ -1,5 +1,5 @@
 function attachWsInterceptor(fastify, connection, clientId) {
-    const originalSend = connection.socket.send.bind(connection.socket);
+    const originalSend = connection.send.bind(connection);
 
     connection.sendSuccess = (action, data = null) => {
         const response = {
