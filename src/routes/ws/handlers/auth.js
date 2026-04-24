@@ -3,7 +3,7 @@ const { loginOrRegisterClient } = require('../../../services/clientService');
 const { getSpoofedGuid } = require('../../../services/guidService');
 
 module.exports = async function handleAuth(fastify, connection, payload) {
-  const { hwid, signature, name = 'UnnamedPlayer' } = payload.data;
+  const { hwid, signature } = payload.data;
 
   if (!isValidSignature(hwid, signature)) {
     connection.sendError('auth_result', 'Invalid signature.');
@@ -20,7 +20,7 @@ module.exports = async function handleAuth(fastify, connection, payload) {
 
   await fastify.redis.hset(redisKey, {
     guid: finalActiveGuid,
-    name: name,
+    name: "UnamedPlayer",
     state: 0,
     server: 'In Lobby',
     playerNum: -1

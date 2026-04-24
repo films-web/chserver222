@@ -1,31 +1,8 @@
 const { randomBytes } = require('crypto');
 
-async function loginOrRegisterClient(db, hwid, signature) {
-  const { rows } = await db.query('SELECT id, guid FROM clients WHERE hwid = $1', [hwid]);
-
-  if (rows.length > 0) {
-    const clientId = rows[0].id;
-    const clientGuid = rows[0].guid;
-    await db.query(
-      `UPDATE clients SET "signature" = $1, "lastSeen" = CURRENT_TIMESTAMP, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $2`,
-      [signature, clientId]
-    );
-    return { clientId, clientGuid };
-  } else {
-    const clientGuid = randomBytes(3).toString('hex');
-    const insertResult = await db.query(
-      `INSERT INTO clients (hwid, guid, signature, "updatedAt") 
-       VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id`,
-      [hwid, clientGuid, signature]
-    );
-    return { clientId: insertResult.rows[0].id, clientGuid };
-  }
-}
 
 async function loginOrRegisterClient(db, hwid, signature, currentName = 'UnnamedPlayer') {
   const { rows } = await db.query('SELECT id, guid FROM clients WHERE hwid = $1', [hwid]);
-
-  const cleanName = currentName ? currentName.replace(/\^./g, '') : 'UnnamedPlayer';
 
   if (rows.length > 0) {
     const clientId = rows[0].id;
@@ -34,7 +11,7 @@ async function loginOrRegisterClient(db, hwid, signature, currentName = 'Unnamed
       `UPDATE clients 
        SET "signature" = $1, "currentName" = $2, "lastSeen" = CURRENT_TIMESTAMP, "updatedAt" = CURRENT_TIMESTAMP 
        WHERE id = $3`,
-      [signature, cleanName, clientId]
+      [signature, currentName, clientId]
     );
     return { clientId, clientGuid };
   } else {
@@ -42,7 +19,7 @@ async function loginOrRegisterClient(db, hwid, signature, currentName = 'Unnamed
     const insertResult = await db.query(
       `INSERT INTO clients (hwid, guid, signature, "currentName", "updatedAt") 
        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) RETURNING id`,
-      [hwid, clientGuid, signature, cleanName]
+      [hwid, clientGuid, signature, currentName]
     );
     return { clientId: insertResult.rows[0].id, clientGuid };
   }
