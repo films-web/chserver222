@@ -11,9 +11,8 @@ const handleRequestGuid = require('./handlers/requestGuid');
 const handleRequestFairshot = require('./handlers/requestFairshot');
 
 module.exports = async function (fastify, opts) {
-  fastify.get('/connect', { websocket: true }, (rawSocket, req) => {
+  fastify.get('/connect', { websocket: true }, (connection, req) => {
 
-    const connection = { socket: rawSocket };
     let currentClientId = null;
     let isAuthed = false;
 
