@@ -45,6 +45,7 @@ const start = async () => {
     // ==========================================
     // WEBSOCKET SERVER SETUP
     // ==========================================
+    console.log("🚀 WS SERVER STARTED");   // 👈 ADD IT HERE
     await wsServer.register(require('@fastify/websocket'));
     await wsServer.register(require('./plugins/db'));
     await wsServer.register(require('./plugins/redis'));
@@ -58,6 +59,7 @@ const start = async () => {
     });
 
     await wsServer.register(require('./routes/ws/index'));
+    console.log("🧩 WS ROUTES LOADED");
 
     // ==========================================
     // START LISTENERS
