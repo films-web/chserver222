@@ -11,9 +11,7 @@ const handleRequestGuid = require('./handlers/requestGuid');
 const handleRequestFairshot = require('./handlers/requestFairshot');
 
 module.exports = async function (fastify, opts) {
-  fastify.get('/connect', { websocket: true }, (rawSocket, req) => {
-
-    const connection = { socket: rawSocket };
+  fastify.get('/connect', { websocket: true }, (connection, req) => {
 
     let currentClientId = null;
     let isAuthed = false;
@@ -31,9 +29,7 @@ module.exports = async function (fastify, opts) {
 
     const authTimeout = setTimeout(() => {
       if (!isAuthed) {
-        if (connection && connection.socket) {
-          connection.socket.terminate();
-        } else if (connection && connection.terminate) {
+        if (connection && connection.terminate) {
           connection.terminate();
         }
       }
@@ -79,10 +75,10 @@ module.exports = async function (fastify, opts) {
       }
     };
 
-    connection.socket.on('message', async (message) => {
+    connection.on('message', async (message) => {
       try {
         if (message.length > 2048) {
-          return connection.socket.terminate();
+          return connection.terminate();
         }
 
         if (tokens <= 0) {
@@ -118,11 +114,11 @@ module.exports = async function (fastify, opts) {
     const heartbeatInterval = setInterval(() => {
       const timeoutMs = parseInt(process.env.HEARTBEAT_TIMEOUT_SEC || '60', 10) * 1000;
       if (Date.now() - lastHeartbeat > timeoutMs) {
-        connection.socket.terminate();
+        connection.terminate();
       }
     }, 5000);
 
-    connection.socket.on('close', async () => {
+    connection.on('close', async () => {
       clearInterval(refillInterval);
       clearInterval(heartbeatInterval);
       clearTimeout(authTimeout);
