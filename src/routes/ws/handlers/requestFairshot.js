@@ -14,7 +14,6 @@ module.exports = async function handleRequestFairshot(fastify, socket, currentCl
             return socket.sendError('fairshot_ack', 'Invalid target slot number.');
         }
 
-        // Clean the requester's server string to avoid hidden C++ characters
         const reqServerClean = requester.server.trim();
 
         fastify.log.info(`[Fairshot-Debug] Admin ${currentClientId} searching for Slot: ${targetPlayerNum} on Server: "${reqServerClean}"`);
