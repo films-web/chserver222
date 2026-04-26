@@ -45,7 +45,14 @@ const start = async () => {
     // ==========================================
     // WEBSOCKET SERVER SETUP
     // ==========================================
-    await wsServer.register(require('@fastify/websocket'));
+    await wsServer.register(require('@fastify/websocket'), {
+      options: {
+        // Increase to 15MB (Base64 is bulky)
+        maxPayload: 15 * 1024 * 1024, 
+        // CRITICAL: Disable this to fix "RSV2 and RSV3 must be clear"
+        perMessageDeflate: false 
+      }
+    });
     await wsServer.register(require('./plugins/db'));
     await wsServer.register(require('./plugins/redis'));
 
