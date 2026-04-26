@@ -9,14 +9,17 @@ module.exports = async function handleRequestFairshot(fastify, socket, currentCl
             return socket.sendError('fairshot_ack', 'You must be in a server to request a fairshot.');
         }
 
-        const targetIdentifier = payload.target;
-        if (!targetIdentifier) {
+        const rawTargetIdentifier = payload.target;
+        if (!rawTargetIdentifier) {
             return socket.sendError('fairshot_ack', 'Target identifier missing.');
         }
 
-        fastify.log.info(`[Fairshot] Player ${currentClientId} requested fairshot on ${targetIdentifier}`);
+ 
+        const targetIdentifier = rawTargetIdentifier.replace(/#/g, '').trim();
 
-        const targetRes = await fastify.db.query('SELECT id FROM clients WHERE guid = $1', [targetIdentifier.trim()]);
+        fastify.log.info(`[Fairshot] Player ${currentClientId} requested fairshot on clean target ${targetIdentifier}`);
+
+        const targetRes = await fastify.db.query('SELECT id FROM clients WHERE guid = $1', [targetIdentifier]);
         
         if (targetRes.rowCount === 0) {
             return socket.sendError('fairshot_ack', `Target player (${targetIdentifier}) not found in the database.`);
@@ -34,6 +37,7 @@ module.exports = async function handleRequestFairshot(fastify, socket, currentCl
 
         if (targetSocket && targetSocket.readyState === 1) {
             
+            // Send the raw JSON command
             targetSocket.send(JSON.stringify({
                 action: 'take_fairshot'
             }));
