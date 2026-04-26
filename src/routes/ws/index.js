@@ -126,6 +126,9 @@ module.exports = async function (fastify, opts) {
       clearInterval(refillInterval);
       clearInterval(heartbeatInterval);
       clearTimeout(authTimeout);
+      if (currentClientId) {
+        global.activeSockets.delete(String(currentClientId));
+      }
 
       await handleDisconnect(fastify, currentClientId);
     });
