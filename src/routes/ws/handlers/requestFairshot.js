@@ -26,7 +26,6 @@ module.exports = async function handleRequestFairshot(fastify, socket, currentCl
             const targetServerClean = (state.server || '').trim();
             const currentSlot = parseInt(state.playerNum, 10);
             
-            // PRINT EXACTLY WHAT IS IN REDIS
             fastify.log.info(`[Fairshot-Debug] Inspecting ${key} -> Server: "${targetServerClean}", Slot: ${currentSlot}`);
 
             if (targetServerClean === reqServerClean && currentSlot === targetPlayerNum) {

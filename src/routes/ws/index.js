@@ -16,6 +16,8 @@ module.exports = async function (fastify, opts) {
     let currentClientId = null;
     let isAuthed = false;
 
+    connection.socket.clientId = currentClientId;
+
     attachWsInterceptor(fastify, connection, currentClientId);
 
     let tokens = 50;
