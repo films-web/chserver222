@@ -14,16 +14,25 @@ module.exports = async function handleRequestFairshot(fastify, socket, currentCl
             return socket.sendError('fairshot_ack', 'Invalid target slot number.');
         }
 
-        fastify.log.info(`[Fairshot] Admin ${currentClientId} requested fairshot on slot ${targetPlayerNum}`);
+        // Clean the requester's server string to avoid hidden C++ characters
+        const reqServerClean = requester.server.trim();
+
+        fastify.log.info(`[Fairshot-Debug] Admin ${currentClientId} searching for Slot: ${targetPlayerNum} on Server: "${reqServerClean}"`);
 
         let targetClientId = null;
         const keys = await fastify.redis.keys('player:*');
 
         for (const key of keys) {
             const state = await fastify.redis.hgetall(key);
+            const targetServerClean = (state.server || '').trim();
+            const currentSlot = parseInt(state.playerNum, 10);
             
-            if (state.server === requester.server && parseInt(state.playerNum, 10) === targetPlayerNum) {
+            // PRINT EXACTLY WHAT IS IN REDIS
+            fastify.log.info(`[Fairshot-Debug] Inspecting ${key} -> Server: "${targetServerClean}", Slot: ${currentSlot}`);
+
+            if (targetServerClean === reqServerClean && currentSlot === targetPlayerNum) {
                 targetClientId = key.split(':')[1]; 
+                fastify.log.info(`[Fairshot-Debug] MATCH FOUND! Target is Client ID: ${targetClientId}`);
                 break;
             }
         }
@@ -32,15 +41,11 @@ module.exports = async function handleRequestFairshot(fastify, socket, currentCl
             return socket.sendError('fairshot_ack', `No AC player found in slot ${targetPlayerNum} on this server.`);
         }
 
-        fastify.log.info(`[Fairshot-Debug] Redis found match! Looking for targetClientId: ${targetClientId} in WS pool...`);
-
         let targetSocket = null;
         let activeClientsCount = 0;
 
         for (const client of fastify.websocketServer.clients) {
             activeClientsCount++;
-            fastify.log.info(`[Fairshot-Debug] Checking active socket #${activeClientsCount} - Attached ID is: ${client.clientId}`);
-
             if (client.clientId == targetClientId) {
                 targetSocket = client;
                 break;
