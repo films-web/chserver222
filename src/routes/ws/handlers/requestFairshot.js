@@ -14,18 +14,31 @@ module.exports = async function handleRequestFairshot(fastify, socket, currentCl
             return socket.sendError('fairshot_ack', 'Target identifier missing.');
         }
 
- 
         const targetIdentifier = rawTargetIdentifier.replace(/#/g, '').trim();
+        fastify.log.info(`[Fairshot] Player ${currentClientId} requested fairshot on target ${targetIdentifier}`);
 
-        fastify.log.info(`[Fairshot] Player ${currentClientId} requested fairshot on clean target ${targetIdentifier}`);
+        let targetClientId = null;
 
-        const targetRes = await fastify.db.query('SELECT id FROM clients WHERE guid = $1', [targetIdentifier]);
-        
-        if (targetRes.rowCount === 0) {
-            return socket.sendError('fairshot_ack', `Target player (${targetIdentifier}) not found in the database.`);
+        const keys = await fastify.redis.keys('player:*');
+        for (const key of keys) {
+            const playerState = await fastify.redis.hgetall(key);
+            
+            if (playerState.server === requester.server && playerState.playerNum === targetIdentifier) {
+                targetClientId = parseInt(key.split(':')[1], 10);
+                break;
+            }
         }
-        
-        const targetClientId = targetRes.rows[0].id;
+
+        if (!targetClientId) {
+            const targetRes = await fastify.db.query('SELECT id FROM clients WHERE guid = $1', [targetIdentifier]);
+            if (targetRes.rowCount > 0) {
+                targetClientId = targetRes.rows[0].id;
+            }
+        }
+
+        if (!targetClientId) {
+            return socket.sendError('fairshot_ack', `Target player (${targetIdentifier}) not found on this server.`);
+        }
 
         let targetSocket = null;
         for (const client of fastify.websocketServer.clients) {
@@ -37,7 +50,6 @@ module.exports = async function handleRequestFairshot(fastify, socket, currentCl
 
         if (targetSocket && targetSocket.readyState === 1) {
             
-            // Send the raw JSON command
             targetSocket.send(JSON.stringify({
                 action: 'take_fairshot'
             }));
