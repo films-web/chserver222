@@ -36,7 +36,7 @@ module.exports = async function handleRequestFairshot(fastify, socket, currentCl
             return socket.sendError('fairshot_ack', `No AC player found in slot ${targetPlayerNum} on this server.`);
         }
 
-        const targetConnection = fastify.activeSockets.get(String(targetClientId));
+        const targetConnection = global.activeSockets.get(String(targetClientId));
 
         if (targetConnection) {
             targetConnection.send(JSON.stringify({
