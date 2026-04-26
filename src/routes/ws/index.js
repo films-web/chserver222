@@ -12,9 +12,6 @@ const handleRequestFairshot = require('./handlers/requestFairshot');
 
 module.exports = async function (fastify, opts) {
   fastify.get('/connect', { websocket: true }, (connection, req) => {
-    if (!global.activeSockets) {
-      global.activeSockets = new Map();
-    }
 
     let currentClientId = null;
     let isAuthed = false;
@@ -44,7 +41,6 @@ module.exports = async function (fastify, opts) {
         if (currentClientId) {
           isAuthed = true;
           clearTimeout(authTimeout);
-          global.activeSockets.set(String(currentClientId), connection);
           attachWsInterceptor(fastify, connection, currentClientId);
         }
       },
@@ -126,9 +122,6 @@ module.exports = async function (fastify, opts) {
       clearInterval(refillInterval);
       clearInterval(heartbeatInterval);
       clearTimeout(authTimeout);
-      if (currentClientId) {
-        global.activeSockets.delete(String(currentClientId));
-      }
 
       await handleDisconnect(fastify, currentClientId);
     });
