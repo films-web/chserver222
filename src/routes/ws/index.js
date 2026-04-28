@@ -35,10 +35,10 @@ module.exports = async function (fastify, opts) {
 
     const handlers = {
       AUTH_REQUEST: async (payload) => {
-        currentClientId = await handleAuth(fastify, connection, payload);
+        currentClientId = await handleAuth(fastify, connection, payload); 
         if (currentClientId) {
           isAuthed = true;
-          connection.clientId = currentClientId;
+          connection.clientId = String(currentClientId); 
           clearTimeout(authTimeout);
           attachWsInterceptor(fastify, connection, currentClientId);
         }
