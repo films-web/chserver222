@@ -14,9 +14,14 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
             return socket.sendError('REQUEST_FAIRSHOT', 'Target identifier missing.');
         }
 
+        const cleanTarget = targetIdentifier.startsWith('#') 
+            ? targetIdentifier.substring(1) 
+            : targetIdentifier;
+
         const playersInServer = await getOnlinePlayers(fastify.redis, { server: requester.server });
+        
         const targetPlayer = playersInServer.find(p => 
-            p.playerNum === targetIdentifier || p.guid === targetIdentifier
+            String(p.playerNum) === cleanTarget || p.guid === cleanTarget
         );
 
         if (!targetPlayer) {
@@ -37,7 +42,9 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
 
         targetSocket.sendSuccess('REQUEST_FAIRSHOT');
         
-        socket.sendSuccess('FAIRSHOT_ACK');
+        socket.sendSuccess('FAIRSHOT_ACK', { 
+            message: `Fairshot request successfully sent to ${targetPlayer.name}` 
+        });
 
         fastify.log.info(`[Fairshot] Player ${currentClientId} triggered fairshot on Target ${targetPlayer.clientId}`);
 
