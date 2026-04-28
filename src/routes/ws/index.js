@@ -1,5 +1,4 @@
-const path = require('path');
-const protobuf = require('protobufjs');
+const { C2SMessage } = require('../../utils/protoLoader');
 const { decrypt } = require('../../utils/security');
 const attachWsInterceptor = require('../../utils/wsInterceptor');
 
@@ -14,11 +13,6 @@ const handleRequestGuid = require('./handlers/requestGuid');
 const handleRequestFairshot = require('./handlers/requestFairshot');
 
 module.exports = async function (fastify, opts) {
-  const protoPath = path.join(__dirname, '../../../proto/message.proto');
-  const protoString = fs.readFileSync(protoPath, 'utf8');
-  const parsed = protobuf.parse(protoString, { keepCase: true });
-  const C2SMessage = parsed.root.lookupType("CheatHaram.C2S_Message");
-
   fastify.get('/connect', { websocket: true }, (connection, req) => {
     let currentClientId = null;
     let isAuthed = false;
@@ -81,20 +75,13 @@ module.exports = async function (fastify, opts) {
 
     connection.on('message', async (message) => {
       try {
-        if (message.length > 4096) {
-          return connection.terminate();
-        }
+        if (message.length > 4096) return connection.terminate();
 
         if (tokens <= 0) return;
         tokens--;
 
-        const encryptedStr = message.toString();
-
-        const decryptedBuffer = decrypt(encryptedStr);
-        if (!decryptedBuffer) {
-          fastify.log.warn(`Failed to decrypt message from ${req.ip}`);
-          return;
-        }
+        const decryptedBuffer = decrypt(message.toString());
+        if (!decryptedBuffer) return;
 
         const decoded = C2SMessage.decode(decryptedBuffer);
         const payload = C2SMessage.toObject(decoded, { enums: String });
