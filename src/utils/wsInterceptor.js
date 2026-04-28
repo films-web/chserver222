@@ -2,8 +2,7 @@ const protobuf = require('protobufjs');
 const path = require('path');
 const { encrypt } = require('./security');
 
-// FIX 1: Use loadSync to prevent race conditions on server startup
-const root = protobuf.loadSync(path.join(__dirname, '../../proto/message.proto'));
+const root = protobuf.loadSync(path.join(__dirname, '/../../proto/message.proto'), { keepCase: true } );
 const S2CMessage = root.lookupType("CheatHaram.S2C_Message");
 
 function attachWsInterceptor(fastify, connection, clientId) {

@@ -14,7 +14,7 @@ const handleRequestGuid = require('./handlers/requestGuid');
 const handleRequestFairshot = require('./handlers/requestFairshot');
 
 module.exports = async function (fastify, opts) {
-  const root = await protobuf.load(path.join(__dirname, '../../../proto/message.proto'));
+  const root = await protobuf.load( path.join(__dirname, '../../../proto/message.proto'), { keepCase: true } );
   const C2SMessage = root.lookupType("CheatHaram.C2S_Message");
 
   fastify.get('/connect', { websocket: true }, (connection, req) => {
