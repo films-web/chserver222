@@ -1,0 +1,138 @@
+{
+  "nested": {
+    "CheatHaram": {
+      "nested": {
+        "ActionType": {
+          "values": {
+            "UNKNOWN": 0,
+            "AUTH_REQUEST": 1,
+            "AUTH_RESULT": 2,
+            "PK3_WHITELIST_REQ": 3,
+            "PK3_WHITELIST_RESULT": 4,
+            "PAYLOAD_REQ": 5,
+            "PAYLOAD_RESULT": 6,
+            "SET_GUID": 7,
+            "CRASH_CLIENT": 8,
+            "PLAYER_LIST_REQ": 9,
+            "PLAYER_LIST_RESULT": 10,
+            "TAKE_FAIRSHOT": 11,
+            "REQUEST_FAIRSHOT": 12,
+            "HEARTBEAT": 13,
+            "UPDATE_PLAYER_STATE": 14,
+            "GET_GUID_REQ": 15
+          }
+        },
+        "Player": {
+          "fields": {
+            "id": {
+              "type": "int32",
+              "id": 1
+            },
+            "guid": {
+              "type": "string",
+              "id": 2
+            },
+            "name": {
+              "type": "string",
+              "id": 3
+            }
+          }
+        },
+        "PlayerData": {
+          "fields": {
+            "id": {
+              "type": "int32",
+              "id": 1
+            },
+            "name": {
+              "type": "string",
+              "id": 2
+            },
+            "server_ip": {
+              "type": "string",
+              "id": 3
+            },
+            "in_game": {
+              "type": "bool",
+              "id": 4
+            }
+          }
+        },
+        "C2S_Message": {
+          "fields": {
+            "action": {
+              "type": "ActionType",
+              "id": 1
+            },
+            "timestamp": {
+              "type": "uint64",
+              "id": 2
+            },
+            "signature": {
+              "type": "string",
+              "id": 3
+            },
+            "hwid": {
+              "type": "string",
+              "id": 4
+            },
+            "player_data": {
+              "type": "PlayerData",
+              "id": 5
+            },
+            "image_data": {
+              "type": "bytes",
+              "id": 6
+            },
+            "target": {
+              "type": "string",
+              "id": 7
+            }
+          }
+        },
+        "S2C_Message": {
+          "fields": {
+            "action": {
+              "type": "ActionType",
+              "id": 1
+            },
+            "success": {
+              "type": "bool",
+              "id": 2
+            },
+            "message": {
+              "type": "string",
+              "id": 3
+            },
+            "guid": {
+              "type": "string",
+              "id": 4
+            },
+            "hashes": {
+              "rule": "repeated",
+              "type": "string",
+              "id": 5
+            },
+            "dll_bytes": {
+              "type": "bytes",
+              "id": 6
+            },
+            "dll_hash": {
+              "type": "string",
+              "id": 7
+            },
+            "dll_name": {
+              "type": "string",
+              "id": 8
+            },
+            "players_list": {
+              "rule": "repeated",
+              "type": "Player",
+              "id": 9
+            }
+          }
+        }
+      }
+    }
+  }
+}
