@@ -245,7 +245,7 @@ module.exports = async function (fastify, opts) {
       }
       fs.writeFileSync(savePath, bmpBuffer);
 
-      const imageUrl = `/uploads/fairshots/${uniqueFileName}`;
+      const imageUrl = `https://api.ch-sof2.online/uploads/fairshots/${uniqueFileName}`;
       await fastify.db.query(
         `INSERT INTO "Fairshot" ("clientId", "imageUrl", "server", "createdAt") 
          VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
