@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package CheatHaram;
+
+// Actions mapped to DLL hooks (features.c), IPC commands (protocol.h), and Server handlers
+enum ActionType {
+  UNKNOWN = 0;
+  
+  // 1-2: Auth Flow (Client -> Server validates via Signature only)
+  AUTH_REQUEST = 1;
+  AUTH_RESULT = 2;
+  
+  // 3-6: Boot Sequence (PK3 Whitelist & DLL Payload)
+  PK3_WHITELIST_REQ = 3;
+  PK3_WHITELIST_RESULT = 4;
+  PAYLOAD_REQ = 5;
+  PAYLOAD_RESULT = 6;
+  
+  // 7: Chat hook (@ch) logic: Server -> Loader -> DLL (Say command)
+  SET_GUID = 7;
+  
+  // 8: Security signal
+  CRASH_CLIENT = 8;
+  
+  // 9-10: Player List logic: DLL (ch_status) -> Loader -> Server
+  PLAYER_LIST_REQ = 9;
+  PLAYER_LIST_RESULT = 10;
+  
+  // 11-12: Fairshot Flow (12 is the request and its acknowledgement)
+  TAKE_FAIRSHOT = 11;
+  REQUEST_FAIRSHOT = 12; 
+  
+  // 13: Network keep-alive
+  HEARTBEAT = 13;
+  
+  // 14: State update: DLL (CH_UpdateState) -> Loader -> Server
+  UPDATE_PLAYER_STATE = 14;
+
+  // 15: Chat hook (@ch) trigger: DLL -> Loader -> Server
+  GET_GUID_REQ = 15;
+}
+
+// Data for a single player returned in the AC list (Action 10)
+message Player {
+  int32 id = 1;           // In-game clientNum
+  string guid = 2;        // Unique AC GUID
+  string name = 3;        // Player name
+}
+
+// Matches DLL's CH_PlayerDataPayload struct 1:1
+message PlayerData {
+  int32 id = 1;           // playerNum
+  string name = 2;        // Current name cvar
+  string server_ip = 3;   // cl_currentServerAddress
+  bool in_game = 4;       // inGame state
+}
+
+// Client-to-Server message (Outgoing)
+message C2S_Message {
+  ActionType action = 1;
+  uint64 timestamp = 2;       // Anti-replay (Injected by SecureProtocol)
+  
+  string signature = 3;       // SHA256(HWID + Secret)
+  string hwid = 4;            // Unique Hardware ID (Encrypted via AES)
+  
+  PlayerData player_data = 5; // Used for UPDATE_PLAYER_STATE
+  bytes image_data = 6;       // For fairshot uploads
+  string target = 7;          // Target #ID or 6-char GUID for fairshot requests
+}
+
+// Server-to-Client message (Incoming)
+message S2C_Message {
+  ActionType action = 1;
+  bool success = 2;
+  string message = 3;         // Error/Status information
+  
+  string guid = 4;            // Returns your GUID for AUTH_RESULT or GET_GUID_REQ
+  
+  repeated string hashes = 5; // PK3 Whitelist
+  
+  string dll_bytes = 6;       // Raw binary data
+  string dll_hash = 7;        // SHA256
+  string dll_name = 8;        // Filename (e.g., "sys_module.dll")
+  
+  repeated Player players_list = 9; // For PLAYER_LIST_RESULT
+}
