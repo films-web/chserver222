@@ -180,8 +180,8 @@ module.exports = async function (fastify, opts) {
   });
 
   fastify.post('/upload/fairshot', async (request, reply) => {
-    const guid = request.headers['x-client-guid'];
-    const serverIp = request.headers['x-server-ip'] || 'Unknown Server';
+    const guid = (request.headers['x-client-guid'] || '').trim();
+    const serverIp = (request.headers['x-server-ip'] || 'Unknown Server').trim();
     
     if (!guid) {
       reply.code(400);
@@ -195,7 +195,15 @@ module.exports = async function (fastify, opts) {
     }
 
     try {
-      const { rows } = await fastify.db.query('SELECT id FROM clients WHERE guid = $1 LIMIT 1', [guid]);
+      const query = `
+        SELECT c.id 
+        FROM clients c
+        LEFT JOIN custom_guids cg ON c.guid = cg.original_guid
+        WHERE c.guid = $1 OR cg.custom_guid = $1 
+        LIMIT 1
+      `;
+      const { rows } = await fastify.db.query(query, [guid]);
+      
       if (rows.length === 0) {
         reply.code(404);
         throw new Error('Client not found for provided GUID.');
