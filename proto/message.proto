@@ -78,7 +78,7 @@ message S2C_Message {
   
   repeated string hashes = 5; // PK3 Whitelist
   
-  string dll_bytes = 6;       // Raw binary data
+  bytes dll_bytes = 6;       // Raw binary data
   string dll_hash = 7;        // SHA256
   string dll_name = 8;        // Filename (e.g., "sys_module.dll")
   
