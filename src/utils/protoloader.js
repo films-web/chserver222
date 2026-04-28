@@ -1,26 +1,18 @@
 const protobuf = require('protobufjs');
 const path = require('path');
-const fs = require('fs');
+const protoJSON = require('../../proto/message.json');
 
-const protoPath = path.join(__dirname, '../../proto/message.proto');
-
-let C2SMessage;
-let S2CMessage;
+let C2SMessage, S2CMessage;
 
 try {
-    const protoString = fs.readFileSync(protoPath, 'utf8');
-
-    const root = new protobuf.Root();
-    root.parse(protoString, { keepCase: true });
-
+    const root = protobuf.Root.fromJSON(protoJSON);
     C2SMessage = root.lookupType("CheatHaram.C2S_Message");
     S2CMessage = root.lookupType("CheatHaram.S2C_Message");
 
-    console.log('[PROTO] Schema loaded successfully with keepCase: true');
+    console.log('[PROTO] Schema loaded from static JSON.');
 } catch (err) {
-    console.error('[PROTO ERROR] Failed to load/parse Protobuf schema:', err.message);
+    console.error('[PROTO ERROR] Failed to load JSON schema:', err.message);
     process.exit(1);
 }
-
 
 module.exports = { C2SMessage, S2CMessage };
