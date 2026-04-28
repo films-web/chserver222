@@ -5,9 +5,10 @@ module.exports = async function handleRequestWhitelist(fastify, socket, currentC
 
   try {
     const activeHashes = await whitelistService.getAllWhitelistedHashes(fastify.db);
-    socket.sendSuccess('whitelist_data', { hashes: activeHashes });
+    socket.sendSuccess('PK3_WHITELIST_RESULT', { hashes: activeHashes });
 
   } catch (error) {
-    socket.sendError('whitelist_data', 'Internal server error retrieving whitelist.');
+    fastify.log.error(`Whitelist request error for client ${currentClientId}:`, error);
+    socket.sendError('PK3_WHITELIST_RESULT', 'Internal server error retrieving whitelist.');
   }
 };
