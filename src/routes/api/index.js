@@ -179,6 +179,30 @@ module.exports = async function (fastify, opts) {
     done(null, body);
   });
 
+  fastify.get('/fairshots', async (request, reply) => {
+    try {
+      const query = `
+        SELECT 
+          f."imageUrl", 
+          f.server, 
+          f."createdAt",
+          COALESCE(cg.custom_guid, c.guid) AS active_guid,
+          COALESCE(c."currentName", 'UnnamedPlayer') AS player_name
+        FROM "Fairshot" f
+        JOIN clients c ON f."clientId" = c.id
+        LEFT JOIN custom_guids cg ON c.guid = cg.original_guid
+        ORDER BY f."createdAt" DESC
+        LIMIT 100
+      `;
+      const { rows } = await fastify.db.query(query);
+      return rows;
+    } catch (err) {
+      fastify.log.error(err);
+      reply.code(500);
+      throw new Error('Failed to fetch global fairshots');
+    }
+  });
+
   fastify.post('/upload/fairshot', async (request, reply) => {
     const guid = (request.headers['x-client-guid'] || '').trim();
     const serverIp = (request.headers['x-server-ip'] || 'Unknown Server').trim();
