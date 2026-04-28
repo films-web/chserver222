@@ -1,8 +1,12 @@
 const protobuf = require('protobufjs');
 const path = require('path');
+const fs = require('fs');
 const { encrypt } = require('./security');
 
-let S2CMessage;
+const protoPath = path.join(__dirname, '../../proto/message.proto');
+const protoString = fs.readFileSync(protoPath, 'utf8');
+const parsed = protobuf.parse(protoString, { keepCase: true });
+const S2CMessage = parsed.root.lookupType("CheatHaram.S2C_Message");
 
 protobuf.load(path.join(__dirname, '../../proto/message.proto'), { keepCase: true }, (err, root) => {
     if (err) {
