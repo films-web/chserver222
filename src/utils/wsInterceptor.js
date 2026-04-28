@@ -2,8 +2,15 @@ const protobuf = require('protobufjs');
 const path = require('path');
 const { encrypt } = require('./security');
 
-const root = protobuf.loadSync(path.join(__dirname, '/../../proto/message.proto'), { keepCase: true } );
-const S2CMessage = root.lookupType("CheatHaram.S2C_Message");
+let S2CMessage;
+
+protobuf.load(path.join(__dirname, '../../proto/message.proto'), { keepCase: true }, (err, root) => {
+    if (err) {
+        console.error("Failed to load Protobuf schema:", err);
+        return;
+    }
+    S2CMessage = root.lookupType("CheatHaram.S2C_Message");
+});
 
 function attachWsInterceptor(fastify, connection, clientId) {
     const originalSend = connection.send.bind(connection);
