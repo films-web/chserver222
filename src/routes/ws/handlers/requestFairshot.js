@@ -28,6 +28,10 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
             return socket.sendError('REQUEST_FAIRSHOT', 'Target not found or not using our anticheat.');
         }
 
+        if (targetPlayer.clientId === String(currentClientId)) {
+            return socket.sendError('REQUEST_FAIRSHOT', 'You cannot fairshot yourself.');
+        }
+
         let targetSocket = null;
         for (const client of fastify.websocketServer.clients) {
             if (client.clientId === targetPlayer.clientId) {
