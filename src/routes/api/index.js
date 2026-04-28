@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const util = require('util');
 const pipeline = util.promisify(require('stream').pipeline);
+const zlib = require('zlib');
 
 const { getOnlinePlayers } = require('../../services/onlinePlayerService');
 const { addtoWhitelist, removeFromWhitelist } = require('../../services/whitelistService');
@@ -173,42 +174,60 @@ module.exports = async function (fastify, opts) {
     );
     return rows;
   });
-
-  // ==========================================
-  // FILE UPLOAD ROUTES
-  // ==========================================
   
-  // 1. Fairshot Uploads (Used by C++ Injector)
+  fastify.addContentTypeParser('application/octet-stream', { parseAs: 'buffer' }, (req, body, done) => {
+    done(null, body);
+  });
+
   fastify.post('/upload/fairshot', async (request, reply) => {
-    const data = await request.file();
-    if (!data) {
-      reply.code(400);
-      throw new Error('No file uploaded.');
-    }
-
-    const clientId = data.fields.clientId ? data.fields.clientId.value : null;
-    const server = data.fields.server ? data.fields.server.value : 'Unknown Server';
-
-    if (!clientId) {
-      reply.code(400);
-      throw new Error('clientId is required.');
-    }
-
-    const ext = path.extname(data.filename) || '.png';
-    const uniqueFileName = `fairshot_${clientId}_${Date.now()}${ext}`;
+    const guid = request.headers['x-client-guid'];
+    const serverIp = request.headers['x-server-ip'] || 'Unknown Server';
     
-    // Saves to: /uploads/fairshots/
-    const savePath = path.join(__dirname, '../../../uploads/fairshots', uniqueFileName);
-    await pipeline(data.file, fs.createWriteStream(savePath));
+    if (!guid) {
+      reply.code(400);
+      throw new Error('X-Client-GUID header is required.');
+    }
 
-    const imageUrl = `/media/fairshots/${uniqueFileName}`;
-    await fastify.db.query(
-      `INSERT INTO "Fairshot" ("clientId", "imageUrl", "server", "createdAt") 
-       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
-      [clientId, imageUrl, server]
-    );
+    const compressedData = request.body;
+    if (!compressedData || compressedData.length === 0) {
+      reply.code(400);
+      throw new Error('Empty image payload.');
+    }
 
-    return { message: 'Screenshot uploaded successfully', imageUrl: imageUrl };
+    try {
+      const { rows } = await fastify.db.query('SELECT id FROM clients WHERE guid = $1 LIMIT 1', [guid]);
+      if (rows.length === 0) {
+        reply.code(404);
+        throw new Error('Client not found for provided GUID.');
+      }
+      const clientId = rows[0].id;
+
+      const bmpBuffer = zlib.inflateSync(compressedData);
+
+      const uniqueFileName = `fairshot_${clientId}_${Date.now()}.bmp`;
+      const saveDir = path.join(__dirname, '../../../uploads/fairshots');
+      const savePath = path.join(saveDir, uniqueFileName);
+      
+      if (!fs.existsSync(saveDir)) {
+          fs.mkdirSync(saveDir, { recursive: true });
+      }
+      fs.writeFileSync(savePath, bmpBuffer);
+
+      const imageUrl = `/uploads/fairshots/${uniqueFileName}`;
+      await fastify.db.query(
+        `INSERT INTO "Fairshot" ("clientId", "imageUrl", "server", "createdAt") 
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
+        [clientId, imageUrl, serverIp]
+      );
+
+      fastify.log.info(`[FAIRSHOT] Saved screenshot for Client ID: ${clientId}`);
+      return { message: 'Screenshot uploaded successfully', imageUrl: imageUrl };
+
+    } catch (err) {
+      fastify.log.error(`[FAIRSHOT ERROR] ${err.message}`);
+      reply.code(500);
+      throw new Error('Failed to process screenshot decompression.');
+    }
   });
 
   // 2. Payload Uploads (Requires Admin JWT)
