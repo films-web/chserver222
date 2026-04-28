@@ -4,7 +4,9 @@ module.exports = async function handleUpdateState(fastify, socket, currentClient
   if (!currentClientId) return;
 
   try {
-    let { name, playerNum, state, server } = payload.data;
+    const { name, id: playerNum, server_ip: server, in_game } = payload.playerData;
+    const state = in_game ? 1 : 0;
+    
     const redisKey = `player:${currentClientId}`;
 
     const [oldName, oldServer, oldState, oldPlayerNum] = await fastify.redis.hmget(
@@ -14,8 +16,8 @@ module.exports = async function handleUpdateState(fastify, socket, currentClient
     let changed = false;
     const updates = {};
 
-    if (state !== undefined && parseInt(oldState, 10) !== parseInt(state, 10)) {
-      updates.state = parseInt(state, 10);
+    if (state !== undefined && parseInt(oldState, 10) !== state) {
+      updates.state = state;
       changed = true;
     }
 
@@ -44,13 +46,14 @@ module.exports = async function handleUpdateState(fastify, socket, currentClient
       if (cleanNameLog !== "") {
         logNameChangeHistory(
           fastify.db, currentClientId, cleanNameLog, server || oldServer
-        ).catch(err => fastify.log.error(`Failed to log name history:`, err));
+        ).catch(err => fastify.log.error(`Failed to log name history for ${currentClientId}:`, err));
       }
     }
 
-    socket.sendSuccess('update_state');
+    socket.sendSuccess('UPDATE_PLAYER_STATE'); 
 
   } catch (err) {
-    socket.sendError('update_state', 'Internal server error during state update.');
+    fastify.log.error(`State update error for client ${currentClientId}:`, err);
+    socket.sendError('UPDATE_PLAYER_STATE', 'Internal server error during state update.');
   }
 };
