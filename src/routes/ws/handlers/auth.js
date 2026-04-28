@@ -3,10 +3,10 @@ const { loginOrRegisterClient } = require('../../../services/clientService');
 const { getSpoofedGuid } = require('../../../services/guidService');
 
 module.exports = async function handleAuth(fastify, socket, payload) {
-  const { hwid, signature } = payload.data;
+  const { hwid, signature } = payload; 
 
-  if (!isValidSignature(hwid, signature)) {
-    socket.sendError('auth_result', 'Invalid signature.');
+  if (!hwid || !signature || !isValidSignature(hwid, signature)) {
+    socket.sendError('AUTH_RESULT', 'Invalid security credentials.');
     socket.close(1008, "Policy Violation");
     return null;
   }
@@ -17,10 +17,9 @@ module.exports = async function handleAuth(fastify, socket, payload) {
   const finalActiveGuid = customGuid || clientGuid;
 
   const redisKey = `player:${clientId}`;
-
   await fastify.redis.hset(redisKey, {
     guid: finalActiveGuid,
-    name: "UnamedPlayer",
+    name: "UnnamedPlayer",
     state: 0,
     server: 'In Lobby',
     playerNum: -1
@@ -29,7 +28,7 @@ module.exports = async function handleAuth(fastify, socket, payload) {
   const timeoutSec = parseInt(process.env.HEARTBEAT_TIMEOUT_SEC || '60', 10);
   await fastify.redis.expire(redisKey, timeoutSec);
 
-  socket.sendSuccess('auth_result', { guid: finalActiveGuid });
+  socket.sendSuccess('AUTH_RESULT', { guid: finalActiveGuid });
 
   return clientId;
 };
