@@ -1,23 +1,46 @@
-const { getPlayerState } = require('../../../services/onlinePlayerService');
+const { getPlayerState, getOnlinePlayers } = require('../../../services/onlinePlayerService');
 
 module.exports = async function (fastify, socket, currentClientId, payload) {
     try {
         if (!currentClientId) return;
         
         const requester = await getPlayerState(fastify.redis, currentClientId);
-        
         if (!requester || !requester.server || requester.server === 'In Lobby') {
             return socket.sendError('REQUEST_FAIRSHOT', 'You must be in a server to request a fairshot.');
         }
 
-        const targetIdentifier = payload.target; 
+        const targetIdentifier = payload.target;
         if (!targetIdentifier) {
             return socket.sendError('REQUEST_FAIRSHOT', 'Target identifier missing.');
         }
 
-        fastify.log.info(`[Fairshot] Player ${currentClientId} requested fairshot on ${targetIdentifier}`);
+        const playersInServer = await getOnlinePlayers(fastify.redis, { server: requester.server });
+        
+        const targetPlayer = playersInServer.find(p => 
+            p.playerNum === targetIdentifier || p.guid === targetIdentifier
+        );
 
-        socket.sendSuccess('REQUEST_FAIRSHOT');
+        if (!targetPlayer) {
+            return socket.sendError('REQUEST_FAIRSHOT', 'Target not found or not using our anticheat.');
+        }
+
+        let targetSocket = null;
+        for (const client of fastify.websocketServer.clients) {
+            if (client.clientId === targetPlayer.clientId) {
+                targetSocket = client;
+                break;
+            }
+        }
+
+        if (!targetSocket) {
+            return socket.sendError('REQUEST_FAIRSHOT', 'Target is online but connection is unstable.');
+        }
+
+        targetSocket.sendSuccess('TAKE_FAIRSHOT');
+        
+        fastify.log.info(`[Fairshot] Player ${currentClientId} triggered fairshot on Target ${targetPlayer.clientId}`);
+        
+        socket.sendSuccess('REQUEST_FAIRSHOT', { message: `Request sent to ${targetPlayer.name}` });
 
     } catch (error) {
         fastify.log.error(`Fairshot request error for client ${currentClientId}:`, error);
