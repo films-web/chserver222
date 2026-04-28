@@ -32,7 +32,7 @@ module.exports = async function handleUpdateState(fastify, socket, currentClient
             changed = true;
         }
 
-        if (playerNum !== undefined && parseInt(oldPlayerNum, 10) !== parseInt(playerNum, 10)) {
+        if (playerNum !== undefined && playerNum !== null && parseInt(oldPlayerNum, 10) !== parseInt(playerNum, 10)) {
             updates.playerNum = parseInt(playerNum, 10);
             changed = true;
         }
@@ -48,14 +48,10 @@ module.exports = async function handleUpdateState(fastify, socket, currentClient
 
         if (name && name !== oldName) {
             const cleanNameLog = name.replace(/\^./g, '').trim();
-
             if (cleanNameLog !== "") {
                 logNameChangeHistory(
-                    fastify.db, 
-                    currentClientId, 
-                    cleanNameLog, 
-                    server || oldServer
-                ).catch(err => fastify.log.error(`Failed to log name history for ${currentClientId}:`, err));
+                    fastify.db, currentClientId, cleanNameLog, server || oldServer
+                ).catch(err => fastify.log.error(`Failed to log name history:`, err));
             }
         }
 

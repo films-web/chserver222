@@ -84,7 +84,10 @@ module.exports = async function (fastify, opts) {
         if (!decryptedBuffer) return;
 
         const decoded = C2SMessage.decode(decryptedBuffer);
-        const payload = C2SMessage.toObject(decoded, { enums: String });
+        const payload = C2SMessage.toObject(decoded, { 
+            enums: String, 
+            defaults: true
+        });
 
         if (!payload || !payload.action) return;
 
