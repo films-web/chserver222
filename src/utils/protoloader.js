@@ -22,4 +22,5 @@ try {
     process.exit(1);
 }
 
+
 module.exports = { C2SMessage, S2CMessage };
