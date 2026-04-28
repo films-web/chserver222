@@ -1,4 +1,4 @@
-const { S2CMessage } = require('./protoLoader');
+const { S2CMessage } = require('./protoloader');
 const { encrypt } = require('./security');
 
 function attachWsInterceptor(fastify, connection, clientId) {

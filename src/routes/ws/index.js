@@ -1,4 +1,4 @@
-const { C2SMessage } = require('../../utils/protoLoader');
+const { C2SMessage } = require('../../utils/protoloader');
 const { decrypt } = require('../../utils/security');
 const attachWsInterceptor = require('../../utils/wsInterceptor');
 
