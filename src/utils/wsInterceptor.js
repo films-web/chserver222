@@ -5,7 +5,7 @@ const { encrypt } = require('./security'); //
 let S2CMessage;
 
 // Load the proto definition for server-to-client messages
-protobuf.load(path.join(__dirname, '../../../proto/messages.proto'), (err, root) => {
+protobuf.load(path.join(__dirname, '../../../proto/message.proto'), (err, root) => {
     if (err) {
         console.error("Failed to load Protobuf schema:", err);
         return;
