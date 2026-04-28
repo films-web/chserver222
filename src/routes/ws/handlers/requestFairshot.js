@@ -15,7 +15,6 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
         }
 
         const playersInServer = await getOnlinePlayers(fastify.redis, { server: requester.server });
-        
         const targetPlayer = playersInServer.find(p => 
             p.playerNum === targetIdentifier || p.guid === targetIdentifier
         );
@@ -36,11 +35,13 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
             return socket.sendError('REQUEST_FAIRSHOT', 'Target is online but connection is unstable.');
         }
 
-        targetSocket.sendSuccess('TAKE_FAIRSHOT');
+        targetSocket.sendSuccess('REQUEST_FAIRSHOT');
         
+        socket.sendSuccess('FAIRSHOT_ACK', { 
+            message: `Fairshot request successfully sent to ${targetPlayer.name}` 
+        });
+
         fastify.log.info(`[Fairshot] Player ${currentClientId} triggered fairshot on Target ${targetPlayer.clientId}`);
-        
-        socket.sendSuccess('REQUEST_FAIRSHOT', { message: `Request sent to ${targetPlayer.name}` });
 
     } catch (error) {
         fastify.log.error(`Fairshot request error for client ${currentClientId}:`, error);

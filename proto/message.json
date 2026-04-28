@@ -19,7 +19,8 @@
             "REQUEST_FAIRSHOT": 12,
             "HEARTBEAT": 13,
             "UPDATE_PLAYER_STATE": 14,
-            "GET_GUID_REQ": 15
+            "GET_GUID_REQ": 15,
+            "FAIRSHOT_ACK": 16
           }
         },
         "Player": {

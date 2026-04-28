@@ -38,6 +38,7 @@ enum ActionType {
 
   // 15: Chat hook (@ch) trigger: DLL -> Loader -> Server
   GET_GUID_REQ = 15;
+  FAIRSHOT_ACK = 16;
 }
 
 // Data for a single player returned in the AC list (Action 10)
