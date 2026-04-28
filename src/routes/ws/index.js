@@ -1,3 +1,6 @@
+const path = require('path');
+const protobuf = require('protobufjs');
+const { decrypt } = require('../../utils/security');
 const attachWsInterceptor = require('../../utils/wsInterceptor');
 
 const handleAuth = require('./handlers/auth');
@@ -11,8 +14,10 @@ const handleRequestGuid = require('./handlers/requestGuid');
 const handleRequestFairshot = require('./handlers/requestFairshot');
 
 module.exports = async function (fastify, opts) {
-  fastify.get('/connect', { websocket: true }, (connection, req) => {
+  const root = await protobuf.load(path.join(__dirname, '../../proto/messages.proto'));
+  const C2SMessage = root.lookupType("CheatHaram.C2S_Message");
 
+  fastify.get('/connect', { websocket: true }, (connection, req) => {
     let currentClientId = null;
     let isAuthed = false;
 
@@ -20,7 +25,6 @@ module.exports = async function (fastify, opts) {
 
     let tokens = 50;
     const refillRate = 50;
-
     const refillInterval = setInterval(() => {
       tokens = Math.min(tokens + refillRate, 50);
     }, 1000);
@@ -28,15 +32,13 @@ module.exports = async function (fastify, opts) {
     let lastHeartbeat = Date.now();
 
     const authTimeout = setTimeout(() => {
-      if (!isAuthed) {
-        if (connection && connection.terminate) {
-          connection.terminate();
-        }
+      if (!isAuthed && connection && connection.terminate) {
+        connection.terminate();
       }
     }, 10000);
 
     const handlers = {
-      auth: async (payload) => {
+      AUTH_REQUEST: async (payload) => {
         currentClientId = await handleAuth(fastify, connection, payload);
         if (currentClientId) {
           isAuthed = true;
@@ -44,32 +46,32 @@ module.exports = async function (fastify, opts) {
           attachWsInterceptor(fastify, connection, currentClientId);
         }
       },
-      heartbeat: async () => {
+      HEARTBEAT: async () => {
         if (!isAuthed) return;
         lastHeartbeat = Date.now();
         await handleHeartbeat(fastify, connection, currentClientId);
       },
-      update_state: async (payload) => {
+      UPDATE_PLAYER_STATE: async (payload) => {
         if (!isAuthed) return;
-        await handleUpdateState(fastify, connection, currentClientId, payload)
+        await handleUpdateState(fastify, connection, currentClientId, payload);
       },
-      pk3_whitelist: async () => {
+      PK3_WHITELIST_REQ: async () => {
         if (!isAuthed) return;
         await handleRequestWhitelist(fastify, connection, currentClientId);
       },
-      payload: async () => {
+      PAYLOAD_REQ: async () => {
         if (!isAuthed) return;
         await handleRequestPayload(fastify, connection, currentClientId);
       },
-      get_player_list: async () => {
+      PLAYER_LIST_REQ: async () => {
         if (!isAuthed) return;
         await handleRequestAcStatus(fastify, connection, currentClientId);
       },
-      request_guid: async (payload) => {
+      GET_GUID_REQ: async (payload) => {
         if (!isAuthed) return;
         await handleRequestGuid(fastify, connection, currentClientId, payload);
       },
-      request_fairshot: async (payload) => {
+      REQUEST_FAIRSHOT: async (payload) => {
         if (!isAuthed) return;
         await handleRequestFairshot(fastify, connection, currentClientId, payload);
       }
@@ -77,37 +79,36 @@ module.exports = async function (fastify, opts) {
 
     connection.on('message', async (message) => {
       try {
-        if (message.length > 2048) {
+        if (message.length > 4096) {
           return connection.terminate();
         }
 
-        if (tokens <= 0) {
-          fastify.log.warn(`Rate limit exceeded for client: ${currentClientId}`);
-          return;
-        }
+        if (tokens <= 0) return;
         tokens--;
 
-        let payload;
-        try {
-          payload = JSON.parse(message.toString());
-        } catch {
+        const encryptedStr = message.toString();
+
+        const decryptedBuffer = decrypt(encryptedStr);
+        if (!decryptedBuffer) {
+          fastify.log.warn(`Failed to decrypt message from ${req.ip}`);
           return;
         }
 
-        if (!payload || typeof payload.action !== 'string') {
-          return;
-        }
+        const decoded = C2SMessage.decode(decryptedBuffer);
+        const payload = C2SMessage.toObject(decoded, { enums: String });
+
+        if (!payload || !payload.action) return;
 
         const handler = handlers[payload.action];
         if (handler) {
-          fastify.log.info(`Received WS action: ${payload.action} from client ${currentClientId}`);
           await handler(payload);
         } else {
-          connection.sendError(payload.action, `Unknown WS action: ${payload.action}`);
+          connection.sendError(payload.action, `No handler registered for ${payload.action}`);
         }
 
       } catch (err) {
-        connection.sendError('unknown', 'Internal Server Error during message processing.');
+        fastify.log.error(`WS Protocol Error: ${err.message}`);
+        connection.sendError('UNKNOWN', 'Protocol processing error');
       }
     });
 
@@ -122,7 +123,6 @@ module.exports = async function (fastify, opts) {
       clearInterval(refillInterval);
       clearInterval(heartbeatInterval);
       clearTimeout(authTimeout);
-
       await handleDisconnect(fastify, currentClientId);
     });
   });
