@@ -298,11 +298,16 @@ module.exports = async function (fastify, opts) {
       fs.mkdirSync(saveDir, { recursive: true });
     }
     const savePath = path.join(saveDir, fileName);
-    await pipeline(data.file, fs.createWriteStream(savePath));
+
+    let fileSize = 0;
+    const writeStream = fs.createWriteStream(savePath);
+    data.file.on('data', (chunk) => { fileSize += chunk.length; });
+    await pipeline(data.file, writeStream);
 
     return { 
       message: 'Loader uploaded successfully', 
-      url: `https://api.ch-sof2.online/uploads/loaders/${fileName}` 
+      url: `https://api.ch-sof2.online/uploads/loaders/${fileName}`,
+      fileSize
     };
   });
 

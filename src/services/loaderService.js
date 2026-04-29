@@ -1,19 +1,19 @@
 async function getActiveLoader(db) {
   const { rows } = await db.query(
-    `SELECT id, url, "fileName", version, "clientSecret" 
+    `SELECT id, url, "fileName", version, "clientSecret", "fileSize" 
      FROM "Loader" WHERE "isActive" = true ORDER BY "updatedAt" DESC LIMIT 1`
   );
   return rows.length > 0 ? rows[0] : null;
 }
 
 async function addLoader(db, data) {
-  const { url, fileName, version, clientSecret, isActive = true } = data;
+  const { url, fileName, version, clientSecret, fileSize = null, isActive = true } = data;
   if (isActive) await db.query('UPDATE "Loader" SET "isActive" = false');
 
   const { rows } = await db.query(
-    `INSERT INTO "Loader" (url, "fileName", version, "clientSecret", "isActive", "updatedAt", "createdAt")
-     VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id`,
-    [url, fileName, version, clientSecret, isActive]
+    `INSERT INTO "Loader" (url, "fileName", version, "clientSecret", "fileSize", "isActive", "updatedAt", "createdAt")
+     VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id`,
+    [url, fileName, version, clientSecret, fileSize, isActive]
   );
   return rows[0].id;
 }
@@ -33,10 +33,10 @@ async function setActiveLoader(db, loaderId) {
 }
 
 async function updateLoader(db, id, data) {
-  const { url, fileName, version, clientSecret } = data;
+  const { url, fileName, version, clientSecret, fileSize = null } = data;
   const { rowCount } = await db.query(
-    `UPDATE "Loader" SET url = $1, "fileName" = $2, version = $3, "clientSecret" = $4, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $5`,
-    [url, fileName, version, clientSecret, id]
+    `UPDATE "Loader" SET url = $1, "fileName" = $2, version = $3, "clientSecret" = $4, "fileSize" = $5, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $6`,
+    [url, fileName, version, clientSecret, fileSize, id]
   );
   return rowCount > 0;
 }

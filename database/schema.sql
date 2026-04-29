@@ -86,6 +86,7 @@ CREATE TABLE "Loader" (
     "fileName" TEXT NOT NULL,
     "version" TEXT,
     "clientSecret" TEXT NOT NULL,
+    "fileSize" BIGINT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
