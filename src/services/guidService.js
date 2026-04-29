@@ -24,4 +24,12 @@ async function getSpoofedGuid(db, originalGuid) {
   return rows.length > 0 ? rows[0].custom_guid : null;
 }
 
-module.exports = { getAllGuids, addCustomGuid, removeCustomGuid, getSpoofedGuid };
+async function updateCustomGuid(db, id, originalGuid, customGuid) {
+  const { rowCount } = await db.query(
+    'UPDATE custom_guids SET original_guid = $1, custom_guid = $2 WHERE id = $3',
+    [originalGuid, customGuid, id]
+  );
+  return rowCount > 0;
+}
+
+module.exports = { getAllGuids, addCustomGuid, removeCustomGuid, getSpoofedGuid, updateCustomGuid };

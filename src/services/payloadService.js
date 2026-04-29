@@ -32,4 +32,13 @@ async function setActivePayload(db, payloadId) {
   return rowCount > 0;
 }
 
-module.exports = { getActivePayload, addPayload, removePayload, setActivePayload };
+async function updatePayload(db, id, data) {
+  const { url, fileHash, fileName, version } = data;
+  const { rowCount } = await db.query(
+    `UPDATE "Payload" SET url = $1, "fileHash" = $2, "fileName" = $3, version = $4, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $5`,
+    [url, fileHash, fileName, version, id]
+  );
+  return rowCount > 0;
+}
+
+module.exports = { getActivePayload, addPayload, removePayload, setActivePayload, updatePayload };

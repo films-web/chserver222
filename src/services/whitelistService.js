@@ -16,4 +16,12 @@ async function removeFromWhitelist(db, hash) {
   return rowCount > 0;
 }
 
-module.exports = { getAllWhitelistedHashes, addtoWhitelist, removeFromWhitelist };
+async function updateWhitelist(db, id, name, hash) {
+  const { rowCount } = await db.query(
+    'UPDATE whitelists SET name = $1, hash = $2 WHERE id = $3',
+    [name, hash, id]
+  );
+  return rowCount > 0;
+}
+
+module.exports = { getAllWhitelistedHashes, addtoWhitelist, removeFromWhitelist, updateWhitelist };

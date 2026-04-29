@@ -32,4 +32,13 @@ async function setActiveLoader(db, loaderId) {
   return rowCount > 0;
 }
 
-module.exports = { getActiveLoader, addLoader, removeLoader, setActiveLoader };
+async function updateLoader(db, id, data) {
+  const { url, fileName, version, clientSecret } = data;
+  const { rowCount } = await db.query(
+    `UPDATE "Loader" SET url = $1, "fileName" = $2, version = $3, "clientSecret" = $4, "updatedAt" = CURRENT_TIMESTAMP WHERE id = $5`,
+    [url, fileName, version, clientSecret, id]
+  );
+  return rowCount > 0;
+}
+
+module.exports = { getActiveLoader, addLoader, removeLoader, setActiveLoader, updateLoader };

@@ -5,13 +5,13 @@ const pipeline = util.promisify(require('stream').pipeline);
 const zlib = require('zlib');
 
 const { getOnlinePlayers } = require('../../services/onlinePlayerService');
-const { addtoWhitelist, removeFromWhitelist } = require('../../services/whitelistService');
-const { getActivePayload, addPayload, removePayload, setActivePayload } = require('../../services/payloadService');
-const { getActiveLoader, addLoader, removeLoader, setActiveLoader } = require('../../services/loaderService');
+const { addtoWhitelist, removeFromWhitelist, updateWhitelist } = require('../../services/whitelistService');
+const { getActivePayload, addPayload, removePayload, setActivePayload, updatePayload } = require('../../services/payloadService');
+const { getActiveLoader, addLoader, removeLoader, setActiveLoader, updateLoader } = require('../../services/loaderService');
 const { getUserByUsername, verifyPassword } = require('../../services/userService');
 
 // Make sure you created guidService.js like we discussed!
-const { getAllGuids, addCustomGuid, removeCustomGuid } = require('../../services/guidService');
+const { getAllGuids, addCustomGuid, removeCustomGuid, updateCustomGuid } = require('../../services/guidService');
 
 module.exports = async function (fastify, opts) {
   
@@ -322,6 +322,16 @@ module.exports = async function (fastify, opts) {
     return { id, name, hash, message: 'Added to whitelist' };
   });
 
+  fastify.put('/whitelists/:id', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+    const { name, hash } = request.body;
+    const success = await updateWhitelist(fastify.db, request.params.id, name, hash);
+    if (!success) {
+      reply.code(404);
+      throw new Error('Whitelist ID not found');
+    }
+    return { updated: true, id: request.params.id };
+  });
+
   fastify.delete('/whitelists/:hash', { onRequest: [fastify.authenticate] }, async (request, reply) => {
     const success = await removeFromWhitelist(fastify.db, request.params.hash);
     if (!success) {
@@ -341,6 +351,16 @@ module.exports = async function (fastify, opts) {
     const { originalGuid, customGuid } = request.body;
     const id = await addCustomGuid(fastify.db, originalGuid, customGuid);
     return { id, originalGuid, customGuid, message: 'Custom GUID mapped successfully' };
+  });
+
+  fastify.put('/guids/:id', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+    const { originalGuid, customGuid } = request.body;
+    const success = await updateCustomGuid(fastify.db, request.params.id, originalGuid, customGuid);
+    if (!success) {
+      reply.code(404);
+      throw new Error('GUID mapping ID not found');
+    }
+    return { updated: true, id: request.params.id };
   });
 
   fastify.delete('/guids/:originalGuid', { onRequest: [fastify.authenticate] }, async (request, reply) => {
@@ -367,6 +387,16 @@ module.exports = async function (fastify, opts) {
     const payloadData = request.body; 
     const id = await addPayload(fastify.db, payloadData);
     return { id, ...payloadData, message: 'Payload registered successfully' };
+  });
+
+  fastify.put('/payloads/:id', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+    const payloadData = request.body;
+    const success = await updatePayload(fastify.db, request.params.id, payloadData);
+    if (!success) {
+      reply.code(404);
+      throw new Error('Payload ID not found');
+    }
+    return { updated: true, id: request.params.id };
   });
 
   fastify.put('/payloads/:id/active', { onRequest: [fastify.authenticate] }, async (request, reply) => {
@@ -402,6 +432,16 @@ module.exports = async function (fastify, opts) {
     const loaderData = request.body; 
     const id = await addLoader(fastify.db, loaderData);
     return { id, ...loaderData, message: 'Loader registered successfully' };
+  });
+
+  fastify.put('/loaders/:id', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+    const loaderData = request.body;
+    const success = await updateLoader(fastify.db, request.params.id, loaderData);
+    if (!success) {
+      reply.code(404);
+      throw new Error('Loader ID not found');
+    }
+    return { updated: true, id: request.params.id };
   });
 
   fastify.put('/loaders/:id/active', { onRequest: [fastify.authenticate] }, async (request, reply) => {
