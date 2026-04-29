@@ -3,6 +3,17 @@ const path = require('path');
 const util = require('util');
 const pipeline = util.promisify(require('stream').pipeline);
 const zlib = require('zlib');
+const crypto = require('crypto');
+
+function computeFileHash(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256');
+    const stream = fs.createReadStream(filePath);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+    stream.on('error', reject);
+  });
+}
 
 const { getOnlinePlayers } = require('../../services/onlinePlayerService');
 const { addtoWhitelist, removeFromWhitelist, updateWhitelist } = require('../../services/whitelistService');
@@ -283,16 +294,16 @@ module.exports = async function (fastify, opts) {
       throw new Error('No payload file uploaded.');
     }
 
-    // Keep the exact filename as uploaded
     const fileName = data.filename;
-    
-    // Saves to: /uploads/payloads/
     const savePath = path.join(__dirname, '../../../uploads/payloads', fileName);
     await pipeline(data.file, fs.createWriteStream(savePath));
 
+    const fileHash = await computeFileHash(savePath);
+
     return { 
       message: 'Payload uploaded successfully', 
-      url: `https://api.ch-sof2.online/uploads/payloads/${fileName}` 
+      url: `https://api.ch-sof2.online/uploads/payloads/${fileName}`,
+      fileHash,
     };
   });
 
