@@ -7,6 +7,7 @@ const zlib = require('zlib');
 const { getOnlinePlayers } = require('../../services/onlinePlayerService');
 const { addtoWhitelist, removeFromWhitelist } = require('../../services/whitelistService');
 const { getActivePayload, addPayload, removePayload, setActivePayload } = require('../../services/payloadService');
+const { getActiveLoader, addLoader, removeLoader, setActiveLoader } = require('../../services/loaderService');
 const { getUserByUsername, verifyPassword } = require('../../services/userService');
 
 // Make sure you created guidService.js like we discussed!
@@ -283,6 +284,28 @@ module.exports = async function (fastify, opts) {
     };
   });
 
+  // 3. Loader Uploads (Requires Admin JWT)
+  fastify.post('/upload/loader', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+    const data = await request.file();
+    if (!data) {
+      reply.code(400);
+      throw new Error('No loader file uploaded.');
+    }
+
+    const fileName = data.filename;
+    const saveDir = path.join(__dirname, '../../../uploads/loaders');
+    if (!fs.existsSync(saveDir)) {
+      fs.mkdirSync(saveDir, { recursive: true });
+    }
+    const savePath = path.join(saveDir, fileName);
+    await pipeline(data.file, fs.createWriteStream(savePath));
+
+    return { 
+      message: 'Loader uploaded successfully', 
+      url: `https://api.ch-sof2.online/uploads/loaders/${fileName}` 
+    };
+  });
+
   // ==========================================
   // PROTECTED ADMIN ROUTES (Require JWT)
   // ==========================================
@@ -360,6 +383,41 @@ module.exports = async function (fastify, opts) {
     if (!success) {
       reply.code(404);
       throw new Error('Payload ID not found');
+    }
+    return { deleted: true, id: request.params.id };
+  });
+
+  // --- LOADERS ---
+  fastify.get('/loaders', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+    const { rows } = await fastify.db.query('SELECT * FROM "Loader" ORDER BY "createdAt" DESC');
+    return rows;
+  });
+
+  fastify.get('/loaders/active', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+    const loader = await getActiveLoader(fastify.db);
+    return loader || null; 
+  });
+
+  fastify.post('/loaders', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+    const loaderData = request.body; 
+    const id = await addLoader(fastify.db, loaderData);
+    return { id, ...loaderData, message: 'Loader registered successfully' };
+  });
+
+  fastify.put('/loaders/:id/active', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+    const success = await setActiveLoader(fastify.db, request.params.id);
+    if (!success) {
+      reply.code(404);
+      throw new Error('Loader ID not found');
+    }
+    return { activated: true, id: request.params.id };
+  });
+
+  fastify.delete('/loaders/:id', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+    const success = await removeLoader(fastify.db, request.params.id);
+    if (!success) {
+      reply.code(404);
+      throw new Error('Loader ID not found');
     }
     return { deleted: true, id: request.params.id };
   });

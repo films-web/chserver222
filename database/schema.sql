@@ -79,3 +79,17 @@ CREATE INDEX "names_history_name_idx" ON "names_history"("name");
 CREATE INDEX "Fairshot_clientId_idx" ON "Fairshot"("clientId");
 CREATE INDEX "Fairshot_server_idx" ON "Fairshot"("server");
 CREATE INDEX "Payload_isActive_idx" ON "Payload"("isActive");
+
+CREATE TABLE "Loader" (
+    "id" SERIAL NOT NULL,
+    "url" TEXT NOT NULL,
+    "fileName" TEXT NOT NULL,
+    "version" TEXT,
+    "clientSecret" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "Loader_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX "Loader_isActive_idx" ON "Loader"("isActive");
