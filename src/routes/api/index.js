@@ -38,6 +38,18 @@ module.exports = async function (fastify, opts) {
     return { service: 'Anti-Cheat REST API' }; 
   });
 
+  // Public endpoint: active loader info for the download page (no auth required)
+  fastify.get('/loader/info', async (request, reply) => {
+    const loader = await getActiveLoader(fastify.db);
+    if (!loader) return reply.code(404).send({ error: 'No active loader found' });
+    return {
+      fileName: loader.fileName,
+      version: loader.version,
+      url: loader.url,
+      fileSize: loader.fileSize,
+    };
+  });
+
   fastify.get('/players/online', async (request, reply) => {
       const filters = {
         state: request.query.state,
