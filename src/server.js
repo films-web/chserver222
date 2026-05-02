@@ -51,7 +51,11 @@ const start = async () => {
     await wsServer.register(require('@fastify/websocket'), {
       options: { 
         maxPayload: 100 * 1024 * 1024, 
-        perMessageDeflate: true
+        perMessageDeflate: {
+          clientNoContextTakeover: true,
+          serverNoContextTakeover: true,
+          threshold: 1024
+        }
       } 
     });
 
