@@ -19,8 +19,11 @@ const start = async () => {
       credentials: true
     });
 
-    await apiServer.register(require('./plugins/db'));
+    // Register core plugins for both servers
     await apiServer.register(require('./plugins/redis'));
+    await wsServer.register(require('./plugins/redis'));
+    await apiServer.register(require('./plugins/db'));
+    await wsServer.register(require('./plugins/db'));
     
     // JWT Plugin for Admin Dashboard
     await apiServer.register(require('./plugins/jwt'));
@@ -48,8 +51,6 @@ const start = async () => {
     await wsServer.register(require('@fastify/websocket'), {
       options: { maxPayload: 100 * 1024 * 1024 } // 100MB
     });
-    await wsServer.register(require('./plugins/db'));
-    await wsServer.register(require('./plugins/redis'));
 
     // Limits connection attempts (handshakes), not messages!
     await wsServer.register(rateLimit, {
