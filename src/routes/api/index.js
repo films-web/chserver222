@@ -227,26 +227,69 @@ module.exports = async function (fastify, opts) {
     }
   });
 
-  // 2. Payload Uploads (Requires Admin JWT)
-  fastify.post('/upload/payload', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post('/fairshots/upload', async (request, reply) => {
     const data = await request.file();
-    if (!data) {
-      reply.code(400);
-      throw new Error('No payload file uploaded.');
+    if (!data) return reply.code(400).send({ error: 'No image data provided' });
+
+    const clientId = data.fields.clientId ? data.fields.clientId.value : null;
+    const requestId = data.fields.requestId ? data.fields.requestId.value : null;
+    const signature = data.fields.signature ? data.fields.signature.value : null;
+
+    if (!clientId || !requestId || !signature) {
+      return reply.code(400).send({ error: 'Missing metadata (clientId, requestId, or signature)' });
     }
 
-    const fileName = data.filename;
-    const savePath = path.join(__dirname, '../../../uploads/payloads', fileName);
-    await pipeline(data.file, fs.createWriteStream(savePath));
+    const challengeKey = `fairshot_challenge:${clientId}`;
+    const challengeDataRaw = await fastify.redis.get(challengeKey);
+    
+    if (!challengeDataRaw) {
+        return reply.code(403).send({ error: 'No active challenge for this client' });
+    }
 
-    const fileHash = await computeFileHash(savePath);
+    const challengeData = JSON.parse(challengeDataRaw);
+    if (challengeData.requestId !== requestId) {
+        return reply.code(403).send({ error: 'Invalid challenge ID' });
+    }
 
-    return { 
-      message: 'Payload uploaded successfully', 
-      url: `https://api.ch-sof2.online/uploads/payloads/${fileName}`,
-      fileHash,
-    };
+    const { getPlayerState } = require('../../services/onlinePlayerService');
+    const player = await getPlayerState(fastify.redis, clientId);
+    if (!player || !player.guid) {
+        return reply.code(403).send({ error: 'Player session not found or GUID missing' });
+    }
+
+    const imageData = await data.toBuffer();
+    
+    const expectedSignature = crypto.createHmac('sha256', player.guid)
+        .update(Buffer.concat([imageData, Buffer.from(requestId)]))
+        .digest('hex');
+
+    if (expectedSignature !== signature) {
+        fastify.log.warn(`[Security] Client ${clientId} invalid fairshot signature on API upload!`);
+        return reply.code(403).send({ error: 'Invalid signature' });
+    }
+
+    await fastify.redis.del(challengeKey);
+
+    const { saveFairshot } = require('../../services/fairshotService');
+    const serverIp = player.server || 'Unknown';
+    const imageUrl = await saveFairshot(fastify, clientId, serverIp, imageData);
+
+    if (challengeData.requesterClientId) {
+        for (const client of fastify.websocketServer.clients) {
+            if (String(client.clientId) === String(challengeData.requesterClientId)) {
+                const { attachWsInterceptor } = require('../../utils/wsInterceptor'); 
+                client.sendSuccess('FAIRSHOT_ACK', { 
+                    message: `Fairshot from ${player.name} is ready! View it at: https://ch-sof2.online` 
+                });
+                break;
+            }
+        }
+    }
+
+    return { success: true, url: imageUrl };
   });
+
+  // 3. Payload Uploads (Requires Admin JWT)
 
   // 3. Loader Uploads (Requires Admin JWT)
   fastify.post('/upload/loader', { onRequest: [fastify.authenticate] }, async (request, reply) => {

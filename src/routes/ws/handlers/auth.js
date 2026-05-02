@@ -28,7 +28,7 @@ module.exports = async function handleAuth(fastify, socket, payload) {
   const timeoutSec = parseInt(process.env.HEARTBEAT_TIMEOUT_SEC || '60', 10);
   await fastify.redis.expire(redisKey, timeoutSec);
 
-  socket.sendSuccess('AUTH_RESULT', { guid: finalActiveGuid });
+  socket.sendSuccess('AUTH_RESULT', { guid: finalActiveGuid, clientId: String(clientId) });
 
   return clientId;
 };
