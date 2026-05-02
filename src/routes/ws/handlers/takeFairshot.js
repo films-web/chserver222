@@ -58,7 +58,7 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
         if (requesterClientId) {
             for (const client of fastify.websocketServer.clients) {
                 if (String(client.clientId) === String(requesterClientId)) {
-                    client.sendSuccess('FAIRSHOT_ACK');
+                    client.sendSuccess('FAIRSHOT_ACK', { message: `Fairshot from ${player ? player.name : currentClientId} is ready! View it at: https://ch-sof2.online` });
                     break;
                 }
             }
