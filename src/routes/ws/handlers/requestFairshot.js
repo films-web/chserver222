@@ -28,9 +28,6 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
             return socket.sendSuccess('FAIRSHOT_ACK', { message: 'Target not found or not using our anticheat.' });
         }
 
-        if (targetPlayer.clientId === String(currentClientId)) {
-            return socket.sendSuccess('FAIRSHOT_ACK', { message: 'You cannot fairshot yourself.' });
-        }
 
         let targetSocket = null;
         for (const client of fastify.websocketServer.clients) {
