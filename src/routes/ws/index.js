@@ -86,7 +86,7 @@ module.exports = async function (fastify, opts) {
         if (tokens <= 0) return;
         tokens--;
 
-        const decryptedBuffer = decrypt(message.toString());
+        const decryptedBuffer = decrypt(message);
         if (!decryptedBuffer) return;
 
         const decoded = C2SMessage.decode(decryptedBuffer);

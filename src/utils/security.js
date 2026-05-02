@@ -31,18 +31,23 @@ function encrypt(plaintextBuffer) {
   }
 }
 
-function decrypt(base64Payload) {
+function decrypt(payload) {
   try {
     if (!AES_KEY || AES_KEY.length !== 32) {
       console.error('[SECURITY ERROR] AES_ENCRYPTION_KEY is missing or not 32 bytes in .env!');
       return null;
     }
 
-    const cleanStr = base64Payload.replace(/[^A-Za-z0-9+/=]/g, "");
-    const rawData = Buffer.from(cleanStr, 'base64');
+    let rawData;
+    if (Buffer.isBuffer(payload)) {
+      rawData = payload;
+    } else {
+      const cleanStr = payload.replace(/[^A-Za-z0-9+/=]/g, "");
+      rawData = Buffer.from(cleanStr, 'base64');
+    }
     
     if (rawData.length <= 16) {
-      console.error(`[SECURITY ERROR] Payload too short (${rawData.length} bytes). Is the loader sending JSON instead of AES?`);
+      console.error(`[SECURITY ERROR] Payload too short (${rawData.length} bytes).`);
       return null;
     }
 
