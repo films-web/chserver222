@@ -6,7 +6,7 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
         
         const requester = await getPlayerState(fastify.redis, currentClientId);
         if (!requester || !requester.server || requester.server === 'In Lobby') {
-            return socket.sendError('REQUEST_FAIRSHOT', 'You must be in a server to request a fairshot.');
+            return socket.sendSuccess('FAIRSHOT_ACK', { message: 'You must be in a server to request a fairshot.' });
         }
 
         const targetIdentifier = payload.target;
@@ -25,11 +25,11 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
         );
 
         if (!targetPlayer) {
-            return socket.sendError('REQUEST_FAIRSHOT', 'Target not found or not using our anticheat.');
+            return socket.sendSuccess('FAIRSHOT_ACK', { message: 'Target not found or not using our anticheat.' });
         }
 
         if (targetPlayer.clientId === String(currentClientId)) {
-            return socket.sendError('REQUEST_FAIRSHOT', 'You cannot fairshot yourself.');
+            return socket.sendSuccess('FAIRSHOT_ACK', { message: 'You cannot fairshot yourself.' });
         }
 
         let targetSocket = null;
@@ -41,7 +41,7 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
         }
 
         if (!targetSocket) {
-            return;
+            return socket.sendSuccess('FAIRSHOT_ACK', { message: 'Target is online but connection is unstable. Try again in a moment.' });
         }
 
         const crypto = require('crypto');
