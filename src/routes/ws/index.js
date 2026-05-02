@@ -81,7 +81,7 @@ module.exports = async function (fastify, opts) {
 
     connection.on('message', async (message) => {
       try {
-        if (message.length > 4096) return connection.terminate();
+        if (message.length > 10 * 1024 * 1024) return connection.terminate();
 
         if (tokens <= 0) return;
         tokens--;
