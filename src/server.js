@@ -45,7 +45,9 @@ const start = async () => {
     // ==========================================
     // WEBSOCKET SERVER SETUP
     // ==========================================
-    await wsServer.register(require('@fastify/websocket'));
+    await wsServer.register(require('@fastify/websocket'), {
+      options: { maxPayload: 100 * 1024 * 1024 } // 100MB
+    });
     await wsServer.register(require('./plugins/db'));
     await wsServer.register(require('./plugins/redis'));
 
