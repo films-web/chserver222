@@ -84,5 +84,4 @@ message S2C_Message {
   string dll_name = 8;        // Filename (e.g., "sys_module.dll")
   
   repeated Player players_list = 9; // For PLAYER_LIST_RESULT
-  string client_id = 10;
-}
+}

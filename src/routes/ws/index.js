@@ -72,6 +72,10 @@ module.exports = async function (fastify, opts) {
       REQUEST_FAIRSHOT: async (payload) => {
         if (!isAuthed) return;
         await handleRequestFairshot(fastify, connection, currentClientId, payload);
+      },
+      TAKE_FAIRSHOT: async (payload) => {
+        if (!isAuthed) return;
+        await handleTakeFairshot(fastify, connection, currentClientId, payload);
       }
     };
 
