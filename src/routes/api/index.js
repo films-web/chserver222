@@ -227,65 +227,6 @@ module.exports = async function (fastify, opts) {
     }
   });
 
-  fastify.post('/upload/fairshot', async (request, reply) => {
-    const guid = (request.headers['x-client-guid'] || '').trim();
-    const serverIp = (request.headers['x-server-ip'] || 'Unknown Server').trim();
-    
-    if (!guid) {
-      reply.code(400);
-      throw new Error('X-Client-GUID header is required.');
-    }
-
-    const compressedData = request.body;
-    if (!compressedData || compressedData.length === 0) {
-      reply.code(400);
-      throw new Error('Empty image payload.');
-    }
-
-    try {
-      const query = `
-        SELECT c.id 
-        FROM clients c
-        LEFT JOIN custom_guids cg ON c.guid = cg.original_guid
-        WHERE c.guid = $1 OR cg.custom_guid = $1 
-        LIMIT 1
-      `;
-      const { rows } = await fastify.db.query(query, [guid]);
-      
-      if (rows.length === 0) {
-        reply.code(404);
-        throw new Error('Client not found for provided GUID.');
-      }
-      const clientId = rows[0].id;
-
-      const bmpBuffer = zlib.inflateSync(compressedData);
-
-      const uniqueFileName = `fairshot_${clientId}_${Date.now()}.bmp`;
-      const saveDir = path.join(__dirname, '../../../uploads/fairshots');
-      const savePath = path.join(saveDir, uniqueFileName);
-      
-      if (!fs.existsSync(saveDir)) {
-          fs.mkdirSync(saveDir, { recursive: true });
-      }
-      fs.writeFileSync(savePath, bmpBuffer);
-
-      const imageUrl = `https://api.ch-sof2.online/uploads/fairshots/${uniqueFileName}`;
-      await fastify.db.query(
-        `INSERT INTO "Fairshot" ("clientId", "imageUrl", "server", "createdAt") 
-         VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
-        [clientId, imageUrl, serverIp]
-      );
-
-      fastify.log.info(`[FAIRSHOT] Saved screenshot for Client ID: ${clientId}`);
-      return { message: 'Screenshot uploaded successfully', imageUrl: imageUrl };
-
-    } catch (err) {
-      fastify.log.error(`[FAIRSHOT ERROR] ${err.message}`);
-      reply.code(500);
-      throw new Error('Failed to process screenshot decompression.');
-    }
-  });
-
   // 2. Payload Uploads (Requires Admin JWT)
   fastify.post('/upload/payload', { onRequest: [fastify.authenticate] }, async (request, reply) => {
     const data = await request.file();

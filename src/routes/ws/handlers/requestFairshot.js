@@ -11,7 +11,7 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
 
         const targetIdentifier = payload.target;
         if (!targetIdentifier) {
-            return socket.sendError('REQUEST_FAIRSHOT', 'Target identifier missing.');
+            return;
         }
 
         const cleanTarget = targetIdentifier.startsWith('#') 
@@ -41,10 +41,19 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
         }
 
         if (!targetSocket) {
-            return socket.sendError('REQUEST_FAIRSHOT', 'Target is online but connection is unstable.');
+            return;
         }
 
-        targetSocket.sendSuccess('REQUEST_FAIRSHOT');
+        const crypto = require('crypto');
+        const requestId = crypto.randomBytes(8).toString('hex');
+
+        await fastify.redis.set(`fairshot_challenge:${targetPlayer.clientId}`, JSON.stringify({
+            requestId,
+            requesterClientId: String(currentClientId),
+            requestTime: Date.now()
+        }), 'EX', 30);
+
+        targetSocket.sendSuccess('REQUEST_FAIRSHOT', { message: requestId });
         
         socket.sendSuccess('FAIRSHOT_ACK');
 
@@ -52,6 +61,5 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
 
     } catch (error) {
         fastify.log.error(`Fairshot request error for client ${currentClientId}:`, error);
-        socket.sendError('REQUEST_FAIRSHOT', 'Internal server error processing fairshot request.');
     }
 };

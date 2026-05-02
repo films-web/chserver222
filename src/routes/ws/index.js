@@ -11,6 +11,7 @@ const handleRequestPayload = require('./handlers/requestPayload');
 const handleRequestAcStatus = require('./handlers/requestAcStatus');
 const handleRequestGuid = require('./handlers/requestGuid');
 const handleRequestFairshot = require('./handlers/requestFairshot');
+const handleTakeFairshot = require('./handlers/takeFairshot');
 
 module.exports = async function (fastify, opts) {
   fastify.get('/connect', { websocket: true }, (connection, req) => {
@@ -71,6 +72,10 @@ module.exports = async function (fastify, opts) {
       REQUEST_FAIRSHOT: async (payload) => {
         if (!isAuthed) return;
         await handleRequestFairshot(fastify, connection, currentClientId, payload);
+      },
+      TAKE_FAIRSHOT: async (payload) => {
+        if (!isAuthed) return;
+        await handleTakeFairshot(fastify, connection, currentClientId, payload);
       }
     };
 
