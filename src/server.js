@@ -65,6 +65,10 @@ const start = async () => {
 
     await wsServer.register(require('./routes/ws/index'));
 
+    wsServer.server.on('upgrade', (request) => {
+      delete request.headers['sec-websocket-extensions'];
+    });
+
     // ==========================================
     // START LISTENERS
     // ==========================================
