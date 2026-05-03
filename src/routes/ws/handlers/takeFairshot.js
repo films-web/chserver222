@@ -64,6 +64,6 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
             }
         }
     } catch (err) {
-        fastify.log.error(`[Fairshot] Error saving fairshot for ${currentClientId}:`, err);
+        fastify.log.error(err, `[Fairshot] Error saving fairshot for ${currentClientId}`);
     }
 };

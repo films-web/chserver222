@@ -8,7 +8,7 @@ async function saveFairshot(fastify, clientId, serverIp, compressedData) {
 
   try {
     const uniqueFileName = `fairshot_${clientId}_${Date.now()}.jpeg`;
-    const saveDir = path.join(__dirname, '../../../uploads/fairshots');
+    const saveDir = path.join(__dirname, '../../uploads/fairshots');
     const savePath = path.join(saveDir, uniqueFileName);
 
     if (!fs.existsSync(saveDir)) {
@@ -28,7 +28,7 @@ async function saveFairshot(fastify, clientId, serverIp, compressedData) {
     return imageUrl;
 
   } catch (err) {
-    fastify.log.error(`[FAIRSHOT SERVICE ERROR] ${err.message}`);
+    fastify.log.error(err, `[Fairshot] Error saving fairshot for ${clientId}`);
     throw new Error('Failed to save fairshot: ' + err.message);
   }
 }
