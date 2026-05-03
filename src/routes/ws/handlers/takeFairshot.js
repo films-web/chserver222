@@ -37,9 +37,14 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
         const player = await getPlayerState(fastify.redis, currentClientId);
         if (!player || !player.guid) throw new Error('Player GUID not found for verification.');
 
+        if (!payload.image_data) {
+            fastify.log.error(`[Fairshot] Missing image_data for client ${currentClientId}`);
+            return;
+        }
+
         const crypto = require('crypto');
         const expectedSignature = crypto.createHmac('sha256', player.guid)
-            .update(Buffer.concat([payload.imageData, Buffer.from(requestId)]))
+            .update(Buffer.concat([payload.image_data, Buffer.from(requestId)]))
             .digest('hex');
 
         if (expectedSignature !== payload.signature) {
@@ -51,7 +56,7 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
         await fastify.redis.del(challengeKey);
 
         const serverIp = player.server || 'Unknown';
-        await saveFairshot(fastify, currentClientId, serverIp, payload.imageData);
+        await saveFairshot(fastify, currentClientId, serverIp, payload.image_data);
         
         connection.sendSuccess('FAIRSHOT_ACK');
 
