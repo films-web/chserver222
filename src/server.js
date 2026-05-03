@@ -48,10 +48,7 @@ const start = async () => {
     // ==========================================
     // WEBSOCKET SERVER SETUP
     // ==========================================
-    await wsServer.register(require('@fastify/websocket'), { 
-      maxPayload: 10 * 1024 * 1024
-    });
-
+    await wsServer.register(require('@fastify/websocket'));
 
     // Limits connection attempts (handshakes), not messages!
     await wsServer.register(rateLimit, {
