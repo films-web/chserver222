@@ -1,19 +1,18 @@
 const { randomBytes } = require('crypto');
 
 
-async function loginOrRegisterClient(db, hwid, signature, currentName = 'UnnamedPlayer') {
-  const { rows } = await db.query('SELECT id, guid FROM clients WHERE hwid = $1', [hwid]);
+async function loginOrRegisterClient(db, hwid, signature) {
+  const { rows } = await db.query('SELECT id, guid, "currentName" FROM clients WHERE hwid = $1', [hwid]);
 
   if (rows.length > 0) {
-    const clientId = rows[0].id;
-    const clientGuid = rows[0].guid;
+    const { id: clientId, guid: clientGuid, currentName } = rows[0];
     await db.query(
       `UPDATE clients 
-       SET "signature" = $1, "currentName" = $2, "lastSeen" = CURRENT_TIMESTAMP, "updatedAt" = CURRENT_TIMESTAMP 
-       WHERE id = $3`,
-      [signature, currentName, clientId]
+       SET "signature" = $1, "lastSeen" = CURRENT_TIMESTAMP, "updatedAt" = CURRENT_TIMESTAMP 
+       WHERE id = $2`,
+      [signature, clientId]
     );
-    return { clientId, clientGuid };
+    return { clientId, clientGuid, currentName: currentName || 'UnnamedPlayer' };
   } else {
     const clientGuid = randomBytes(3).toString('hex');
     const insertResult = await db.query(

@@ -11,7 +11,7 @@ module.exports = async function handleAuth(fastify, socket, payload) {
     return null;
   }
 
-  const { clientId, clientGuid } = await loginOrRegisterClient(fastify.db, hwid, signature);
+  const { clientId, clientGuid, currentName } = await loginOrRegisterClient(fastify.db, hwid, signature);
 
   const customGuid = await getSpoofedGuid(fastify.db, clientGuid);
   const finalActiveGuid = customGuid || clientGuid;
@@ -19,7 +19,7 @@ module.exports = async function handleAuth(fastify, socket, payload) {
   const redisKey = `player:${clientId}`;
   await fastify.redis.hset(redisKey, {
     guid: finalActiveGuid,
-    name: "UnnamedPlayer",
+    name: currentName,
     state: 0,
     server: 'In Lobby',
     playerNum: -1
