@@ -210,8 +210,8 @@ module.exports = async function (fastify, opts) {
           f."imageUrl", 
           f.server, 
           f."createdAt",
-          COALESCE(cg.custom_guid, c.guid) AS active_guid,
-          COALESCE(c."currentName", 'UnnamedPlayer') AS player_name
+          f."playerName" AS player_name,
+          COALESCE(cg.custom_guid, c.guid) AS active_guid
         FROM "Fairshot" f
         JOIN clients c ON f."clientId" = c.id
         LEFT JOIN custom_guids cg ON c.guid = cg.original_guid

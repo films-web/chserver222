@@ -56,7 +56,7 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
         await fastify.redis.del(challengeKey);
 
         const serverIp = player.server || 'Unknown';
-        await saveFairshot(fastify, currentClientId, serverIp, payload.image_data);
+        await saveFairshot(fastify, currentClientId, serverIp, payload.image_data, player.name);
         
         connection.sendSuccess('FAIRSHOT_ACK');
 

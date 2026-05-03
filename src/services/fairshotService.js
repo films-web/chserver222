@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-async function saveFairshot(fastify, clientId, serverIp, compressedData) {
+async function saveFairshot(fastify, clientId, serverIp, compressedData, playerName) {
   if (!compressedData || compressedData.length === 0) {
     throw new Error('Empty image payload.');
   }
@@ -19,9 +19,9 @@ async function saveFairshot(fastify, clientId, serverIp, compressedData) {
 
     const imageUrl = `https://api.ch-sof2.online/uploads/fairshots/${uniqueFileName}`;
     await fastify.db.query(
-      `INSERT INTO "Fairshot" ("clientId", "imageUrl", "server", "createdAt") 
-       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
-      [clientId, imageUrl, serverIp || 'Unknown Server']
+      `INSERT INTO "Fairshot" ("clientId", "imageUrl", "server", "playerName", "createdAt") 
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`,
+      [clientId, imageUrl, serverIp || 'Unknown Server', playerName || 'Unknown']
     );
 
     fastify.log.info(`[FAIRSHOT] Saved JPEG for Client ID: ${clientId}`);
