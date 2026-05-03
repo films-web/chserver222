@@ -7,7 +7,7 @@ async function saveFairshot(fastify, clientId, serverIp, compressedData) {
   }
 
   try {
-    const uniqueFileName = `fairshot_${clientId}_${Date.now()}.png`;
+    const uniqueFileName = `fairshot_${clientId}_${Date.now()}.jpeg`;
     const saveDir = path.join(__dirname, '../../../uploads/fairshots');
     const savePath = path.join(saveDir, uniqueFileName);
 
@@ -24,7 +24,7 @@ async function saveFairshot(fastify, clientId, serverIp, compressedData) {
       [clientId, imageUrl, serverIp || 'Unknown Server']
     );
 
-    fastify.log.info(`[FAIRSHOT] Saved PNG for Client ID: ${clientId}`);
+    fastify.log.info(`[FAIRSHOT] Saved JPEG for Client ID: ${clientId}`);
     return imageUrl;
 
   } catch (err) {
