@@ -52,7 +52,7 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
 
         targetSocket.sendSuccess('REQUEST_FAIRSHOT', { message: requestId });
         
-        socket.sendSuccess('FAIRSHOT_ACK', { message: `Fairshot request sent to ${targetPlayer.name} ^7(#${targetPlayer.playerNum}). Waiting for upload...` });
+        socket.sendSuccess('FAIRSHOT_ACK', { message: `Fairshot request sent waiting for upload...` });
         fastify.log.info(`[Fairshot] Player ${currentClientId} triggered fairshot on Target ${targetPlayer.clientId}`);
 
     } catch (error) {
