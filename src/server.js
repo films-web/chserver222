@@ -48,12 +48,7 @@ const start = async () => {
     // ==========================================
     // WEBSOCKET SERVER SETUP
     // ==========================================
-    await wsServer.register(require('@fastify/websocket'), {
-      options: { 
-        maxPayload: 100 * 1024 * 1024, 
-        perMessageDeflate: false
-      } 
-    });
+    await wsServer.register(require('@fastify/websocket'));
 
     // Limits connection attempts (handshakes), not messages!
     await wsServer.register(rateLimit, {
@@ -64,10 +59,6 @@ const start = async () => {
     });
 
     await wsServer.register(require('./routes/ws/index'));
-
-    wsServer.server.on('upgrade', (request) => {
-      delete request.headers['sec-websocket-extensions'];
-    });
 
     // ==========================================
     // START LISTENERS
