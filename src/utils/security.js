@@ -4,8 +4,9 @@ const crypto = require('crypto');
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const AES_KEY = process.env.AES_ENCRYPTION_KEY;
 
-function isValidSignature(hwid, signature) {
-  const expectedSignature = crypto.createHmac('sha256', CLIENT_SECRET)
+function isValidSignature(hwid, signature, customSecret) {
+  const secret = customSecret || CLIENT_SECRET;
+  const expectedSignature = crypto.createHmac('sha256', secret)
     .update(hwid)
     .digest('hex');
   return signature === expectedSignature;

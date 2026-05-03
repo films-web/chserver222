@@ -41,4 +41,12 @@ async function updateLoader(db, id, data) {
   return rowCount > 0;
 }
 
-module.exports = { getActiveLoader, addLoader, removeLoader, setActiveLoader, updateLoader };
+async function getLoaderByVersion(db, version) {
+  const { rows } = await db.query(
+    'SELECT "clientSecret" FROM "Loader" WHERE version = $1 LIMIT 1',
+    [version]
+  );
+  return rows.length > 0 ? rows[0] : null;
+}
+
+module.exports = { getActiveLoader, addLoader, removeLoader, setActiveLoader, updateLoader, getLoaderByVersion };

@@ -88,6 +88,10 @@
             "target": {
               "type": "string",
               "id": 7
+            },
+            "version": {
+              "type": "string",
+              "id": 8
             }
           }
         },

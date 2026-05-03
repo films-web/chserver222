@@ -67,6 +67,7 @@ message C2S_Message {
   PlayerData player_data = 5; // Used for UPDATE_PLAYER_STATE
   bytes image_data = 6;       // For fairshot uploads
   string target = 7;          // Target #ID or 6-char GUID for fairshot requests
+  string version = 8;   // Current loader version
 }
 
 // Server-to-Client message (Incoming)
