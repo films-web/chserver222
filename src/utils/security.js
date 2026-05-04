@@ -3,8 +3,37 @@ const { promisify } = require('util');
 
 class SecurityUtils {
     // Matches the C++ AesTransportKey
-    static AES_KEY = Buffer.from(process.env.AES_TRANSPORT_KEY, 'hex'); 
+    static AES_KEY = (() => {
+        const raw = process.env.AES_ENCRYPTION_KEY || 'Ch34tH4r4m_S3cr3t_K3y_256B1t_!!!';
+        const buf = Buffer.from(raw, 'utf8');
+        if (buf.length === 32) return buf;
+        
+        // Pad or truncate to 32 bytes
+        const finalBuf = Buffer.alloc(32, 0);
+        buf.copy(finalBuf, 0, 0, Math.min(buf.length, 32));
+        return finalBuf;
+    })();
+
     static REPLAY_WINDOW_SECONDS = 30;
+
+    /**
+     * Encrypts outgoing packets to the loader
+     */
+    static encrypt(data) {
+        try {
+            const iv = crypto.randomBytes(16);
+            const cipher = crypto.createCipheriv('aes-256-cbc', this.AES_KEY, iv);
+            let encrypted = cipher.update(data);
+            encrypted = Buffer.concat([encrypted, cipher.final()]);
+            
+            // Format: IV (16 bytes) + Ciphertext
+            const result = Buffer.concat([iv, encrypted]);
+            return result.toString('base64');
+        } catch (err) {
+            console.error('[Security] Encryption failed:', err);
+            return null;
+        }
+    }
 
     /**
      * Decrypts incoming packets from the loader
@@ -12,7 +41,8 @@ class SecurityUtils {
     static decrypt(encryptedBase64) {
         try {
             const encryptedData = Buffer.from(encryptedBase64, 'base64');
-            // Assuming AES-256-CBC with a fixed IV for transport or appended IV
+            if (encryptedData.length <= 16) return null;
+
             const iv = encryptedData.slice(0, 16);
             const ciphertext = encryptedData.slice(16);
             
