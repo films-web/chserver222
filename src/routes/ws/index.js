@@ -1,5 +1,5 @@
 const attachWsInterceptor = require('./wsInterceptor');
-const handlers = require('./handlers'); // Loads your registry index.js
+const handlers = require('./handlers');
 const processIncomingMessage = require('./messageProcessor');
 
 module.exports = async function (fastify, opts) {
