@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+package CheatHaram;
+
+// ---------------------------------------------------------
+// Actions mapped to DLL hooks (features.c), IPC commands (protocol.h), and Server handlers
+// ---------------------------------------------------------
+enum ActionType {
+  UNKNOWN = 0;
+  
+  // 1-3: Auth Flow
+  AUTH_REQUEST = 1;
+  AUTH_RESULT = 2;
+  UPDATE_REQUIRED = 3;
+  
+  // 4-7: Boot Sequence
+  PK3_WHITELIST_REQ = 4;
+  PK3_WHITELIST_RESULT = 5;
+  PAYLOAD_REQ = 6;
+  PAYLOAD_RESULT = 7;
+  
+  // 8: Chat hook (@ch) logic
+  SET_GUID = 8;
+  
+  // 9: Security signal
+  CRASH_CLIENT = 9;
+  
+  // 10-11: Player List logic
+  PLAYER_LIST_REQ = 10;
+  PLAYER_LIST_RESULT = 11;
+  
+  // 12-13: Fairshot Flow
+  TAKE_FAIRSHOT = 12;
+  REQUEST_FAIRSHOT = 13; 
+  
+  // 14: Network keep-alive
+  HEARTBEAT = 14;
+  
+  // 15: State update
+  UPDATE_PLAYER_STATE = 15;
+
+  // 16-17: Misc / Acks
+  GET_GUID_REQ = 16;
+  FAIRSHOT_ACK = 17;
+}
+
+// ---------------------------------------------------------
+// Shared / Core Models
+// ---------------------------------------------------------
+message Player {
+  int32 id = 1;           // In-game clientNum
+  string guid = 2;        // Unique AC GUID
+  string name = 3;        // Player name
+}
+
+message PlayerData {
+  int32 id = 1;           // playerNum
+  string name = 2;        // Current name cvar
+  string server_ip = 3;   // cl_currentServerAddress
+  bool in_game = 4;       // inGame state
+}
+
+// ---------------------------------------------------------
+// Feature-Specific Payloads
+// ---------------------------------------------------------
+message AuthData {
+  string hwid = 1;        // Unique Hardware ID (Encrypted via AES)
+  string signature = 2;   // SHA256(HWID + Secret)
+  string version = 3;     // Loader version
+}
+
+// NEW: Dedicated Auth Result payload
+message AuthResultData {
+  string guid = 1;          // Returns your assigned AC GUID
+  uint64 server_time = 2;   // Server timestamp for synchronization
+}
+
+message FairshotData {
+  bytes image_data = 1;     // The raw JPEG/PNG bytes
+  string request_id = 2;    // The exact nonce provided by the server in REQUEST_FAIRSHOT
+  uint64 capture_time = 5;  // Local timestamp of when the capture occurred
+}
+
+message FairshotChallenge {
+  string request_id = 1;       // Packet-level nonce (used in the AuthData signature)
+  string watermark_secret = 2; // The dynamic key the loader MUST embed inside the image data
+}
+
+message PayloadData {
+  bytes dll_bytes = 1;      // Raw binary data
+  string dll_hash = 2;      // SHA256
+  string dll_name = 3;      // Filename (e.g., "sys_module.dll")
+}
+
+// UPDATED: Now strictly used for the SET_GUID action
+message GuidData {
+  string guid = 1;          // The AC GUID to set/update
+}
+
+message WhitelistData {
+  repeated string hashes = 1; // List of allowed SHA256 hashes
+}
+
+message UpdateData {
+  string download_url = 1;  // Direct link to the new exe
+}
+
+// ---------------------------------------------------------
+// Outgoing: Client-to-Server
+// ---------------------------------------------------------
+message C2S_Message {
+  ActionType action = 1;
+  
+  // -- GLOBAL ANTI-REPLAY MECHANISM --
+  uint64 timestamp = 2;       // Limits the server's cache window (e.g., +/- 30 seconds)
+  string message_id = 3;      // Client-generated UUID (Server rejects duplicates)
+  
+  // -- MODULAR DATA --
+  AuthData auth = 4;          
+  PlayerData player_data = 5; 
+  FairshotData fairshot = 6;  
+  
+  string target = 7;          // Target #ID or 6-char GUID for requests
+}
+
+// ---------------------------------------------------------
+// Incoming: Server-to-Client
+// ---------------------------------------------------------
+message S2C_Message {
+  ActionType action = 1;
+  bool success = 2;
+  string message = 3;         // Error/Status information
+  
+  // -- MODULAR DATA --
+  AuthResultData auth_result = 4; // Populated on AUTH_RESULT
+  GuidData guid = 5;              // Populated on SET_GUID
+  WhitelistData pk3_whitelist = 6;
+  PayloadData payload = 7;        
+  repeated Player players_list = 8; 
+  FairshotChallenge fairshot_req = 9; 
+  UpdateData update_info = 10;    // Populated on UPDATE_REQUIRED
+}

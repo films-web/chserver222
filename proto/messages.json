@@ -1,0 +1,240 @@
+{
+  "nested": {
+    "CheatHaram": {
+      "nested": {
+        "ActionType": {
+          "values": {
+            "UNKNOWN": 0,
+            "AUTH_REQUEST": 1,
+            "AUTH_RESULT": 2,
+            "UPDATE_REQUIRED": 3,
+            "PK3_WHITELIST_REQ": 4,
+            "PK3_WHITELIST_RESULT": 5,
+            "PAYLOAD_REQ": 6,
+            "PAYLOAD_RESULT": 7,
+            "SET_GUID": 8,
+            "CRASH_CLIENT": 9,
+            "PLAYER_LIST_REQ": 10,
+            "PLAYER_LIST_RESULT": 11,
+            "TAKE_FAIRSHOT": 12,
+            "REQUEST_FAIRSHOT": 13,
+            "HEARTBEAT": 14,
+            "UPDATE_PLAYER_STATE": 15,
+            "GET_GUID_REQ": 16,
+            "FAIRSHOT_ACK": 17
+          }
+        },
+        "Player": {
+          "fields": {
+            "id": {
+              "type": "int32",
+              "id": 1
+            },
+            "guid": {
+              "type": "string",
+              "id": 2
+            },
+            "name": {
+              "type": "string",
+              "id": 3
+            }
+          }
+        },
+        "PlayerData": {
+          "fields": {
+            "id": {
+              "type": "int32",
+              "id": 1
+            },
+            "name": {
+              "type": "string",
+              "id": 2
+            },
+            "serverIp": {
+              "type": "string",
+              "id": 3
+            },
+            "inGame": {
+              "type": "bool",
+              "id": 4
+            }
+          }
+        },
+        "AuthData": {
+          "fields": {
+            "hwid": {
+              "type": "string",
+              "id": 1
+            },
+            "signature": {
+              "type": "string",
+              "id": 2
+            },
+            "version": {
+              "type": "string",
+              "id": 3
+            }
+          }
+        },
+        "AuthResultData": {
+          "fields": {
+            "guid": {
+              "type": "string",
+              "id": 1
+            },
+            "serverTime": {
+              "type": "uint64",
+              "id": 2
+            }
+          }
+        },
+        "FairshotData": {
+          "fields": {
+            "imageData": {
+              "type": "bytes",
+              "id": 1
+            },
+            "requestId": {
+              "type": "string",
+              "id": 2
+            },
+            "captureTime": {
+              "type": "uint64",
+              "id": 5
+            }
+          }
+        },
+        "FairshotChallenge": {
+          "fields": {
+            "requestId": {
+              "type": "string",
+              "id": 1
+            },
+            "watermarkSecret": {
+              "type": "string",
+              "id": 2
+            }
+          }
+        },
+        "PayloadData": {
+          "fields": {
+            "dllBytes": {
+              "type": "bytes",
+              "id": 1
+            },
+            "dllHash": {
+              "type": "string",
+              "id": 2
+            },
+            "dllName": {
+              "type": "string",
+              "id": 3
+            }
+          }
+        },
+        "GuidData": {
+          "fields": {
+            "guid": {
+              "type": "string",
+              "id": 1
+            }
+          }
+        },
+        "WhitelistData": {
+          "fields": {
+            "hashes": {
+              "rule": "repeated",
+              "type": "string",
+              "id": 1
+            }
+          }
+        },
+        "UpdateData": {
+          "fields": {
+            "downloadUrl": {
+              "type": "string",
+              "id": 1
+            }
+          }
+        },
+        "C2S_Message": {
+          "fields": {
+            "action": {
+              "type": "ActionType",
+              "id": 1
+            },
+            "timestamp": {
+              "type": "uint64",
+              "id": 2
+            },
+            "messageId": {
+              "type": "string",
+              "id": 3
+            },
+            "auth": {
+              "type": "AuthData",
+              "id": 4
+            },
+            "playerData": {
+              "type": "PlayerData",
+              "id": 5
+            },
+            "fairshot": {
+              "type": "FairshotData",
+              "id": 6
+            },
+            "target": {
+              "type": "string",
+              "id": 7
+            }
+          }
+        },
+        "S2C_Message": {
+          "fields": {
+            "action": {
+              "type": "ActionType",
+              "id": 1
+            },
+            "success": {
+              "type": "bool",
+              "id": 2
+            },
+            "message": {
+              "type": "string",
+              "id": 3
+            },
+            "authResult": {
+              "type": "AuthResultData",
+              "id": 4
+            },
+            "guid": {
+              "type": "GuidData",
+              "id": 5
+            },
+            "pk3Whitelist": {
+              "type": "WhitelistData",
+              "id": 6
+            },
+            "payload": {
+              "type": "PayloadData",
+              "id": 7
+            },
+            "playersList": {
+              "rule": "repeated",
+              "type": "Player",
+              "id": 8
+            },
+            "fairshotReq": {
+              "type": "FairshotChallenge",
+              "id": 9
+            },
+            "updateInfo": {
+              "type": "UpdateData",
+              "id": 10
+            }
+          }
+        }
+      }
+    }
+  }
+}
