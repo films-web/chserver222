@@ -4,11 +4,12 @@ const { getSpoofedGuid } = require('../../../services/guidService');
 const { getLoaderByVersion, getActiveLoader } = require('../../../services/loaderService');
 
 module.exports = async function handleAuth(fastify, socket, payload) {
-  const { hwid, signature, version } = payload; 
+  const authData = payload.auth || {};
+  const { hwid, signature, version } = authData; 
 
   if (!hwid || !signature) {
     socket.sendError('AUTH_RESULT', 'Invalid security credentials.');
-    socket.close(1008, "Policy Violation");
+    if (socket.close) socket.close(1008, "Policy Violation");
     return null;
   }
 
@@ -20,7 +21,7 @@ module.exports = async function handleAuth(fastify, socket, payload) {
 
   if (!isValidSignature(hwid, signature, loaderSecret)) {
     socket.sendError('AUTH_RESULT', 'Invalid signature for this loader version.');
-    socket.close(1008, "Policy Violation");
+    if (socket.close) socket.close(1008, "Policy Violation");
     return null;
   }
 
