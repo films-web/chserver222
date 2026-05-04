@@ -2,16 +2,8 @@ const { C2SMessage } = require('../../utils/protoloader');
 const SecurityUtils = require('../../utils/security');
 const attachWsInterceptor = require('../../utils/wsInterceptor');
 
-const handleAuth = require('./handlers/auth');
-const handleHeartbeat = require('./handlers/heartbeat');
-const handleUpdateState = require('./handlers/updateState');
-const handleDisconnect = require('./handlers/disconnect');
-const handleRequestWhitelist = require('./handlers/requestWhitelist');
-const handleRequestPayload = require('./handlers/requestPayload');
-const handleRequestAcStatus = require('./handlers/requestAcStatus');
-const handleRequestGuid = require('./handlers/requestGuid');
-const handleRequestFairshot = require('./handlers/requestFairshot');
-const handleTakeFairshot = require('./handlers/takeFairshot');
+const handlers = require('./handlers');
+const processIncoming = require('./messageProcessor');
 
 module.exports = async function (fastify, opts) {
   fastify.get('/connect', { websocket: true }, (connection, req) => {
@@ -36,7 +28,7 @@ module.exports = async function (fastify, opts) {
 
     const handlers = {
       AUTH_REQUEST: async (payload) => {
-        currentClientId = await handleAuth(fastify, connection, payload); 
+        currentClientId = await handlers.handleAuth(fastify, connection, payload); 
         if (currentClientId) {
           isAuthed = true;
           connection.clientId = String(currentClientId); 
@@ -47,35 +39,35 @@ module.exports = async function (fastify, opts) {
       HEARTBEAT: async () => {
         if (!isAuthed) return;
         lastHeartbeat = Date.now();
-        await handleHeartbeat(fastify, connection, currentClientId);
+        await handlers.handleHeartbeat(fastify, connection, currentClientId);
       },
       UPDATE_PLAYER_STATE: async (payload) => {
         if (!isAuthed) return;
-        await handleUpdateState(fastify, connection, currentClientId, payload);
+        await handlers.handleUpdateState(fastify, connection, currentClientId, payload);
       },
       PK3_WHITELIST_REQ: async () => {
         if (!isAuthed) return;
-        await handleRequestWhitelist(fastify, connection, currentClientId);
+        await handlers.handleRequestWhitelist(fastify, connection, currentClientId);
       },
       PAYLOAD_REQ: async () => {
         if (!isAuthed) return;
-        await handleRequestPayload(fastify, connection, currentClientId);
+        await handlers.handleRequestPayload(fastify, connection, currentClientId);
       },
       PLAYER_LIST_REQ: async () => {
         if (!isAuthed) return;
-        await handleRequestAcStatus(fastify, connection, currentClientId);
+        await handlers.handleRequestAcStatus(fastify, connection, currentClientId);
       },
       GET_GUID_REQ: async (payload) => {
         if (!isAuthed) return;
-        await handleRequestGuid(fastify, connection, currentClientId, payload);
+        await handlers.handleRequestGuid(fastify, connection, currentClientId, payload);
       },
       REQUEST_FAIRSHOT: async (payload) => {
         if (!isAuthed) return;
-        await handleRequestFairshot(fastify, connection, currentClientId, payload);
+        await handlers.handleRequestFairshot(fastify, connection, currentClientId, payload);
       },
       TAKE_FAIRSHOT: async (payload) => {
         if (!isAuthed) return;
-        await handleTakeFairshot(fastify, connection, currentClientId, payload);
+        await handlers.handleTakeFairshot(fastify, connection, currentClientId, payload);
       }
     };
 
@@ -171,7 +163,7 @@ module.exports = async function (fastify, opts) {
       clearInterval(refillInterval);
       clearInterval(heartbeatInterval);
       clearTimeout(authTimeout);
-      await handleDisconnect(fastify, currentClientId);
+      await handlers.handleDisconnect(fastify, currentClientId);
     });
   });
 };
