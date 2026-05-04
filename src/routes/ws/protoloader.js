@@ -1,6 +1,6 @@
 const protobuf = require('protobufjs');
 const path = require('path');
-const protoJSON = require('../../proto/messages.json');
+const protoJSON = require('./proto/messages.json');
 
 let C2SMessage, S2CMessage;
 

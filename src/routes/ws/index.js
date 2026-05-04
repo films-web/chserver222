@@ -1,169 +1,118 @@
-const { C2SMessage } = require('../../utils/protoloader');
-const SecurityUtils = require('../../utils/security');
-const attachWsInterceptor = require('../../utils/wsInterceptor');
-
-const handlers = require('./handlers');
-const processIncoming = require('./messageProcessor');
+const attachWsInterceptor = require('./wsInterceptor');
+const handlers = require('./handlers'); // Loads your registry index.js
+const processIncomingMessage = require('./messageProcessor');
 
 module.exports = async function (fastify, opts) {
   fastify.get('/connect', { websocket: true }, (connection, req) => {
-    let currentClientId = null;
-    let isAuthed = false;
 
-    attachWsInterceptor(fastify, connection, currentClientId);
+    const state = {
+      clientId: null,
+      isAuthed: false,
+      lastHeartbeat: Date.now(),
+      tokens: 50
+    };
 
-    let tokens = 50;
-    const refillRate = 50;
+    attachWsInterceptor(fastify, connection, state.clientId);
+
     const refillInterval = setInterval(() => {
-      tokens = Math.min(tokens + refillRate, 50);
+      state.tokens = Math.min(state.tokens + 50, 50);
     }, 1000);
 
-    let lastHeartbeat = Date.now();
+    const heartbeatInterval = setInterval(() => {
+      const timeout = parseInt(process.env.HEARTBEAT_TIMEOUT_SEC || '60', 10) * 1000;
+      if (Date.now() - state.lastHeartbeat > timeout) {
+        fastify.log.info(`[WS] Heartbeat timeout for ${state.clientId || 'Unauthed'}`);
+        connection.terminate();
+      }
+    }, 5000);
 
     const authTimeout = setTimeout(() => {
-      if (!isAuthed && connection && connection.terminate) {
+      if (!state.isAuthed) {
+        fastify.log.info('[WS] Auth timeout reached');
         connection.terminate();
       }
     }, 10000);
 
-    const handlers = {
-      AUTH_REQUEST: async (payload) => {
-        currentClientId = await handlers.handleAuth(fastify, connection, payload); 
-        if (currentClientId) {
-          isAuthed = true;
-          connection.clientId = String(currentClientId); 
-          clearTimeout(authTimeout);
-          attachWsInterceptor(fastify, connection, currentClientId);
-        }
-      },
-      HEARTBEAT: async () => {
-        if (!isAuthed) return;
-        lastHeartbeat = Date.now();
-        await handlers.handleHeartbeat(fastify, connection, currentClientId);
-      },
-      UPDATE_PLAYER_STATE: async (payload) => {
-        if (!isAuthed) return;
-        await handlers.handleUpdateState(fastify, connection, currentClientId, payload);
-      },
-      PK3_WHITELIST_REQ: async () => {
-        if (!isAuthed) return;
-        await handlers.handleRequestWhitelist(fastify, connection, currentClientId);
-      },
-      PAYLOAD_REQ: async () => {
-        if (!isAuthed) return;
-        await handlers.handleRequestPayload(fastify, connection, currentClientId);
-      },
-      PLAYER_LIST_REQ: async () => {
-        if (!isAuthed) return;
-        await handlers.handleRequestAcStatus(fastify, connection, currentClientId);
-      },
-      GET_GUID_REQ: async (payload) => {
-        if (!isAuthed) return;
-        await handlers.handleRequestGuid(fastify, connection, currentClientId, payload);
-      },
-      REQUEST_FAIRSHOT: async (payload) => {
-        if (!isAuthed) return;
-        await handlers.handleRequestFairshot(fastify, connection, currentClientId, payload);
-      },
-      TAKE_FAIRSHOT: async (payload) => {
-        if (!isAuthed) return;
-        await handlers.handleTakeFairshot(fastify, connection, currentClientId, payload);
-      }
-    };
-
     connection.on('message', async (message) => {
       try {
-        if (message.length > 1024 * 1024) { // 1MB limit for Fairshots
-          fastify.log.warn(`[WS] Client ${currentClientId} sent oversized message: ${message.length} bytes`);
-          return connection.terminate();
-        }
+        if (message.length > 1024 * 1024) return connection.terminate();
+        if (state.tokens-- <= 0) return fastify.log.warn('[WS] Rate limited');
 
-        if (tokens <= 0) {
-            fastify.log.warn(`[WS] Client rate limited.`);
-            return;
-        }
-        tokens--;
-
-        // 1. Base64 Decrypt (using trim to strip WS padding/newlines)
-        // Fix applied: Using SecurityUtils directly to prevent 'this' context loss
-        const decryptedBuffer = SecurityUtils.decrypt(message.toString('utf8').trim());
-        if (!decryptedBuffer) {
-            fastify.log.error(`[WS] Failed to decrypt message from ${currentClientId || 'Unknown IP'}`);
-            return;
-        }
-
-        // 2. Decode Protobuf
-        let decoded;
-        try {
-            decoded = C2SMessage.decode(decryptedBuffer);
-        } catch (err) {
-            fastify.log.error(`[WS] Protobuf Decode Error: ${err.message}`);
-            return;
-        }
-
-        const payload = C2SMessage.toObject(decoded, { 
-            enums: String, 
-            defaults: true,
-            longs: String,  // Prevents large numbers from becoming JS objects
-            keepCase: true  // CRITICAL: Keeps message_id as message_id instead of messageId
-        });
-
-        if (!payload || !payload.action) {
-            fastify.log.error(`[WS] Action missing in payload: ${JSON.stringify(payload)}`);
-            return;
-        }
-
-        fastify.log.info(`[WS] Received action: ${payload.action} from client ID: ${currentClientId}`);
-
-        const msgId = payload.message_id || payload.messageId;
-        const rawTs = payload.timestamp || payload.timeStamp;
+        const payload = await processIncomingMessage(fastify, message, state.clientId);
         
-        const clientTime = parseInt(rawTs, 10);
+        fastify.log.info(`[WS] Action: ${payload.action} | ID: ${state.clientId}`);
 
-        if (!msgId || isNaN(clientTime)) {
-            fastify.log.warn(`[Security] Metadata extraction failed! msgId: ${msgId}, rawTs: ${rawTs}`);
-            fastify.log.info(`[WS] RAW PAYLOAD DUMP: ${JSON.stringify(payload)}`);
-            return;
-        }
+        switch (payload.action) {
+          case 'AUTH_REQUEST':
+            const authId = await handlers.handleAuth(fastify, connection, payload); 
+            if (authId) {
+              state.isAuthed = true;
+              state.clientId = String(authId);
+              connection.clientId = state.clientId;
+              clearTimeout(authTimeout);
+              attachWsInterceptor(fastify, connection, state.clientId);
+            }
+            break;
 
-        const security = await SecurityUtils.isMessageValid(
-            fastify.redis, 
-            msgId, 
-            clientTime
-        );
+          case 'HEARTBEAT':
+            if (!state.isAuthed) return;
+            state.lastHeartbeat = Date.now();
+            await handlers.handleHeartbeat(fastify, connection, state.clientId);
+            break;
 
-        if (!security.valid) {
-            fastify.log.warn(`[Security] WS Message Rejected: ${security.reason} | Client: ${currentClientId}`);
-            return;
-        }
+          case 'UPDATE_PLAYER_STATE':
+            if (!state.isAuthed) return;
+            await handlers.handleUpdateState(fastify, connection, state.clientId, payload);
+            break;
 
-        // 4. Route to Handler
-        const handler = handlers[payload.action];
-        if (handler) {
-          await handler(payload);
-        } else {
-          fastify.log.warn(`[WS] No handler registered for ${payload.action}`);
-          if (connection.sendError) connection.sendError(payload.action, `No handler registered`);
+          case 'PK3_WHITELIST_REQ':
+            if (!state.isAuthed) return;
+            await handlers.handleRequestWhitelist(fastify, connection, state.clientId);
+            break;
+
+          case 'PAYLOAD_REQ':
+            if (!state.isAuthed) return;
+            await handlers.handleRequestPayload(fastify, connection, state.clientId);
+            break;
+
+          case 'PLAYER_LIST_REQ':
+            if (!state.isAuthed) return;
+            await handlers.handleRequestAcStatus(fastify, connection, state.clientId);
+            break;
+
+          case 'GET_GUID_REQ':
+            if (!state.isAuthed) return;
+            await handlers.handleRequestGuid(fastify, connection, state.clientId, payload);
+            break;
+
+          case 'REQUEST_FAIRSHOT':
+            if (!state.isAuthed) return;
+            await handlers.handleRequestFairshot(fastify, connection, state.clientId, payload);
+            break;
+
+          case 'TAKE_FAIRSHOT':
+            if (!state.isAuthed) return;
+            await handlers.handleTakeFairshot(fastify, connection, state.clientId, payload);
+            break;
+
+          default:
+            fastify.log.warn(`[WS] No handler found for: ${payload.action}`);
+            if (connection.sendError) connection.sendError(payload.action, 'Unknown action');
         }
 
       } catch (err) {
-        fastify.log.error(`WS Protocol Error: ${err.stack}`);
-        if (connection.sendError) connection.sendError('UNKNOWN', 'Protocol processing error');
+        fastify.log.error(`[WS] Protocol Error: ${err.message}`);
+        if (connection.sendError) connection.sendError('PROTOCOL_ERROR', 'Failed to process request');
       }
     });
-
-    const heartbeatInterval = setInterval(() => {
-      const timeoutMs = parseInt(process.env.HEARTBEAT_TIMEOUT_SEC || '60', 10) * 1000;
-      if (Date.now() - lastHeartbeat > timeoutMs) {
-        connection.terminate();
-      }
-    }, 5000);
 
     connection.on('close', async () => {
       clearInterval(refillInterval);
       clearInterval(heartbeatInterval);
       clearTimeout(authTimeout);
-      await handlers.handleDisconnect(fastify, currentClientId);
+      if (state.clientId) {
+        await handlers.handleDisconnect(fastify, state.clientId);
+      }
     });
   });
 };

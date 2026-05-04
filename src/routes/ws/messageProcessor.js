@@ -1,5 +1,5 @@
-const SecurityUtils = require('../../utils/security');
-const { C2SMessage } = require('../../utils/protoloader');
+const SecurityUtils = require('./security');
+const { C2SMessage } = require('./protoloader');
 
 async function processIncomingMessage(fastify, message, currentClientId) {
   const decryptedBuffer = SecurityUtils.decrypt(message.toString('utf8').trim());

@@ -1,4 +1,4 @@
-const SecurityUtils = require('../../../utils/security');
+const SecurityUtils = require('../security');
 const { loginOrRegisterClient } = require('../../../services/clientService');
 const { getSpoofedGuid } = require('../../../services/guidService');
 const { getLoaderByVersion, getActiveLoader } = require('../../../services/loaderService');
