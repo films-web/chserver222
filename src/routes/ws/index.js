@@ -1,5 +1,6 @@
 const { C2SMessage } = require('../../utils/protoloader');
-const { decrypt } = require('../../utils/security');
+const SecurityUtils = require('../../utils/security');
+const { decrypt } = SecurityUtils;
 const attachWsInterceptor = require('../../utils/wsInterceptor');
 
 const handleAuth = require('./handlers/auth');
@@ -101,20 +102,15 @@ module.exports = async function (fastify, opts) {
         if (!payload || !payload.action) return;
 
         // -- GLOBAL ANTI-REPLAY MECHANISM --
-        const now = Date.now();
-        const msgTime = Number(payload.timestamp);
-        if (Math.abs(now - msgTime) > 30000) {
-            fastify.log.warn(`[Security] Replay attempt detected (Timestamp out of sync): ${currentClientId}`);
-            return;
-        }
+        const security = await SecurityUtils.isMessageValid(
+            fastify.redis, 
+            payload.message_id, 
+            Number(payload.timestamp)
+        );
 
-        if (payload.message_id) {
-            const replayKey = `msg_replay:${payload.message_id}`;
-            const isDuplicate = await fastify.redis.set(replayKey, '1', 'EX', 60, 'NX');
-            if (!isDuplicate) {
-                fastify.log.warn(`[Security] Duplicate message detected: ${payload.message_id} from ${currentClientId}`);
-                return;
-            }
+        if (!security.valid) {
+            fastify.log.warn(`[Security] WS Message Rejected: ${security.reason} | Client: ${currentClientId}`);
+            return;
         }
 
         const handler = handlers[payload.action];
