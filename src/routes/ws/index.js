@@ -109,7 +109,9 @@ module.exports = async function (fastify, opts) {
 
         const payload = C2SMessage.toObject(decoded, { 
             enums: String, 
-            defaults: true
+            defaults: true,
+            longs: String,
+            keepCase: true
         });
 
         if (!payload || !payload.action) {
