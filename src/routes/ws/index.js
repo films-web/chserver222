@@ -82,7 +82,6 @@ module.exports = async function (fastify, opts) {
 
     connection.on('message', async (message) => {
       try {
-        fastify.log.info(`[WS] Received message from client ID: ${currentClientId} | Size: ${message.length} bytes`);
         if (message.length > 1024 * 1024) { // 1MB limit for Fairshots
           fastify.log.warn(`[WS] Client ${currentClientId} sent oversized message: ${message.length} bytes`);
           return connection.terminate();
