@@ -8,6 +8,5 @@ module.exports = {
   handleRequestAcStatus: require('./requestAcStatus'),
   handleRequestGuid: require('./requestGuid'),
   handleRequestFairshot: require('./requestFairshot'),
-  handleTakeFairshot: require('./takeFairshot'),
-  handleReportEvent: require('./reportEvent')
-};
+  handleTakeFairshot: require('./takeFairshot')
+};
