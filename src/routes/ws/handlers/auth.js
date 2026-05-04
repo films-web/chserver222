@@ -48,7 +48,7 @@ module.exports = async function handleAuth(fastify, socket, payload) {
   socket.sendSuccess('AUTH_RESULT', { 
     auth_result: {
       guid: finalActiveGuid,
-      server_time: Date.now()
+      server_time: Math.floor(Date.now() / 1000)
     }
   });
 
