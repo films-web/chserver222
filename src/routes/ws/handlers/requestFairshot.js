@@ -59,7 +59,7 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
             }
         });
         
-        socket.sendSuccess('FAIRSHOT_ACK', { message: `^3[CheatHaram] ^7Fairshot request sent waiting for upload...` });
+        socket.sendSuccess('FAIRSHOT_ACK', { message: `^3[CheatHaram] ^7Fairshot request sent waiting for upload...\n` });
         fastify.log.info(`[Fairshot] Player ${currentClientId} triggered fairshot on Target ${targetPlayer.clientId}`);
 
     } catch (error) {
