@@ -24,6 +24,19 @@ module.exports = async function handleAuth(fastify, socket, payload) {
     return null;
   }
 
+  // 1. Mandatory Version Check
+  const activeLoader = await getActiveLoader(fastify.db);
+  if (activeLoader && activeLoader.version !== version) {
+    fastify.log.info(`[AutoUpdate] Signaling update: ${version} -> ${activeLoader.version}`);
+    socket.sendSuccess('UPDATE_REQUIRED', {
+      update_info: {
+        download_url: activeLoader.url
+      }
+    });
+    return null; // Block further actions until updated
+  }
+
+  // 2. Registration / Session Initialization (Only for latest version)
   const { clientId, clientGuid, currentName } = await loginOrRegisterClient(fastify.db, hwid, signature);
 
   const customGuid = await getSpoofedGuid(fastify.db, clientGuid);
@@ -40,23 +53,6 @@ module.exports = async function handleAuth(fastify, socket, payload) {
 
   const timeoutSec = parseInt(process.env.HEARTBEAT_TIMEOUT_SEC || '60', 10);
   await fastify.redis.expire(redisKey, timeoutSec);
-
-  // Check for updates
-  const activeLoader = await getActiveLoader(fastify.db);
-  let updateUrl = null;
-  if (activeLoader && activeLoader.version !== version) {
-    updateUrl = activeLoader.url;
-    fastify.log.info(`[AutoUpdate] Signaling update to client ${clientId}: ${version} -> ${activeLoader.version}`);
-  }
-
-  if (updateUrl) {
-    socket.sendSuccess('UPDATE_REQUIRED', {
-      update_info: {
-        download_url: updateUrl
-      }
-    });
-    return null; // Block further actions until updated
-  }
 
   socket.sendSuccess('AUTH_RESULT', { 
     auth_result: {
