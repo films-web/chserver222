@@ -7,7 +7,7 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
         
         const requester = await getPlayerState(fastify.redis, currentClientId);
         if (!requester || !requester.server || requester.server === 'In Lobby') {
-            return socket.sendSuccess('FAIRSHOT_ACK', { message: 'You must be in a server to request a fairshot.' });
+            return socket.sendSuccess('FAIRSHOT_ACK', { message: '^3[CheatHaram] ^7You must be in a server to request a fairshot.' });
         }
 
         const targetIdentifier = payload.target;
@@ -26,7 +26,7 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
         );
 
         if (!targetPlayer) {
-            return socket.sendSuccess('FAIRSHOT_ACK', { message: 'Target not found or not using our anticheat.' });
+            return socket.sendSuccess('FAIRSHOT_ACK', { message: '^3[CheatHaram] ^7Target not found or not using our anticheat.' });
         }
 
         let targetSocket = null;
@@ -38,13 +38,12 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
         }
 
         if (!targetSocket) {
-            return socket.sendSuccess('FAIRSHOT_ACK', { message: 'Target is online but connection is unstable. Try again in a moment.' });
+            return socket.sendSuccess('FAIRSHOT_ACK', { message: '^3[CheatHaram] ^7Target is online but connection is unstable. Try again in a moment.' });
         }
 
         const watermarkSecret = crypto.randomBytes(16).toString('hex');
         const requestId = crypto.randomBytes(8).toString('hex');
 
-        // Store the challenge state in Redis for strict verification later
         await fastify.redis.set(`fairshot_challenge:${targetPlayer.clientId}`, JSON.stringify({
             requestId,
             requesterClientId: String(currentClientId),
@@ -52,16 +51,15 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
             watermarkSecret
         }), 'EX', 30);
 
-        // Send the challenge to the target, now including requester_id
         targetSocket.sendSuccess('REQUEST_FAIRSHOT', { 
             fairshot_req: {
                 request_id: requestId,
                 watermark_secret: watermarkSecret,
-                requester_id: String(currentClientId) // <-- ADDED: Passing the context to the C++ loader
+                requester_id: String(currentClientId)
             }
         });
         
-        socket.sendSuccess('FAIRSHOT_ACK', { message: `^7Fairshot request sent waiting for upload...` });
+        socket.sendSuccess('FAIRSHOT_ACK', { message: `^3[CheatHaram] ^7Fairshot request sent waiting for upload...` });
         fastify.log.info(`[Fairshot] Player ${currentClientId} triggered fairshot on Target ${targetPlayer.clientId}`);
 
     } catch (error) {

@@ -1,13 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-async function saveFairshot(fastify, clientId, serverIp, compressedData, playerName) {
+async function saveFairshot(fastify, guid, clientId, serverIp, compressedData, playerName) {
   if (!compressedData || compressedData.length === 0) {
     throw new Error('Empty image payload.');
   }
 
   try {
-    const uniqueFileName = `fairshot_${clientId}_${Date.now()}.jpeg`;
+    const uniqueFileName = `fairshot_${guid}_${Date.now()}.jpeg`;
     const saveDir = path.join(__dirname, '../../uploads/fairshots');
     const savePath = path.join(saveDir, uniqueFileName);
 
