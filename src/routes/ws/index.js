@@ -101,6 +101,8 @@ module.exports = async function (fastify, opts) {
 
         if (!payload || !payload.action) return;
 
+        fastify.log.info(`[WS] Received action: ${payload.action} from client ID: ${currentClientId}`);
+
         // -- GLOBAL ANTI-REPLAY MECHANISM --
         const security = await SecurityUtils.isMessageValid(
             fastify.redis, 
