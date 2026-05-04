@@ -42,11 +42,7 @@ enum ActionType {
   // 16-17: Misc / Acks
   GET_GUID_REQ = 16;
   FAIRSHOT_ACK = 17;
-
-  // 18: Security logging
-  REPORT_EVENT = 18;
 }
-
 
 // ---------------------------------------------------------
 // Shared / Core Models
@@ -111,16 +107,6 @@ message UpdateData {
   string download_url = 1;  // Direct link to the new exe
 }
 
-message EventData {
-  string event_type = 1;
-  string action = 2;
-  string details = 3;
-  string severity = 4;
-  string player_name = 5;
-  string guid = 6;
-}
-
-
 // ---------------------------------------------------------
 // Outgoing: Client-to-Server
 // ---------------------------------------------------------
@@ -137,9 +123,7 @@ message C2S_Message {
   FairshotData fairshot = 6;  
   
   string target = 7;          // Target #ID or 6-char GUID for requests
-  EventData event = 8;        // Added for security logging
 }
-
 
 // ---------------------------------------------------------
 // Incoming: Server-to-Client
