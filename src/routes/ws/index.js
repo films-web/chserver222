@@ -1,6 +1,5 @@
 const { C2SMessage } = require('../../utils/protoloader');
 const SecurityUtils = require('../../utils/security');
-const { decrypt } = SecurityUtils;
 const attachWsInterceptor = require('../../utils/wsInterceptor');
 
 const handleAuth = require('./handlers/auth');
@@ -82,7 +81,7 @@ module.exports = async function (fastify, opts) {
 
     connection.on('message', async (message) => {
       try {
-        if (message.length > 1024 * 1024) {
+        if (message.length > 1024 * 1024) { // 1MB limit for Fairshots
           fastify.log.warn(`[WS] Client ${currentClientId} sent oversized message: ${message.length} bytes`);
           return connection.terminate();
         }
@@ -93,12 +92,15 @@ module.exports = async function (fastify, opts) {
         }
         tokens--;
 
+        // 1. Base64 Decrypt (using trim to strip WS padding/newlines)
+        // Fix applied: Using SecurityUtils directly to prevent 'this' context loss
         const decryptedBuffer = SecurityUtils.decrypt(message.toString('utf8').trim());
         if (!decryptedBuffer) {
             fastify.log.error(`[WS] Failed to decrypt message from ${currentClientId || 'Unknown IP'}`);
             return;
         }
 
+        // 2. Decode Protobuf
         let decoded;
         try {
             decoded = C2SMessage.decode(decryptedBuffer);
@@ -110,8 +112,8 @@ module.exports = async function (fastify, opts) {
         const payload = C2SMessage.toObject(decoded, { 
             enums: String, 
             defaults: true,
-            longs: String,
-            keepCase: true
+            longs: String,  // Prevents large numbers from becoming JS objects
+            keepCase: true  // CRITICAL: Keeps message_id as message_id instead of messageId
         });
 
         if (!payload || !payload.action) {
@@ -121,11 +123,20 @@ module.exports = async function (fastify, opts) {
 
         fastify.log.info(`[WS] Received action: ${payload.action} from client ID: ${currentClientId}`);
 
+        const msgId = payload.message_id || payload.messageId;
+        const rawTs = payload.timestamp || payload.timeStamp;
+        
+        const clientTime = parseInt(rawTs, 10);
 
-        const clientTime = parseInt(payload.timestamp, 10);
+        if (!msgId || isNaN(clientTime)) {
+            fastify.log.warn(`[Security] Metadata extraction failed! msgId: ${msgId}, rawTs: ${rawTs}`);
+            fastify.log.info(`[WS] RAW PAYLOAD DUMP: ${JSON.stringify(payload)}`);
+            return;
+        }
+
         const security = await SecurityUtils.isMessageValid(
             fastify.redis, 
-            payload.message_id, 
+            msgId, 
             clientTime
         );
 
@@ -134,6 +145,7 @@ module.exports = async function (fastify, opts) {
             return;
         }
 
+        // 4. Route to Handler
         const handler = handlers[payload.action];
         if (handler) {
           await handler(payload);
