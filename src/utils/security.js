@@ -1,11 +1,11 @@
 const crypto = require('crypto');
 
 class SecurityUtils {
-    // Matches your C++ AesTransportKey
     static AES_KEY = (() => {
         const raw = process.env.AES_ENCRYPTION_KEY || 'Ch34tH4r4m_S3cr3t_K3y_256B1t_!!!';
         const buf = Buffer.from(raw, 'utf8');
         if (buf.length === 32) return buf;
+        
         const finalBuf = Buffer.alloc(32, 0);
         buf.copy(finalBuf, 0, 0, Math.min(buf.length, 32));
         return finalBuf;
@@ -14,20 +14,18 @@ class SecurityUtils {
     static REPLAY_WINDOW_SECONDS = 30;
 
     /**
-     * REAL SIGNATURE CHECK
-     * Uses HMAC-SHA256 to verify the HWID wasn't tampered with.
+     * Real HMAC-SHA256 Signature Check
      */
     static isValidSignature(hwid, signature, loaderSecret) {
-        if (!hwid || !signature || !loaderSecret) return false;[cite: 2]
+        if (!hwid || !signature || !loaderSecret) return false;
 
         try {
-            // Re-calculate the expected signature using the loader's secret key[cite: 2]
             const expectedSignature = crypto
                 .createHmac('sha256', loaderSecret)
                 .update(hwid)
                 .digest('hex');
 
-            // Constant-time comparison to prevent timing attacks[cite: 2]
+            // Secure comparison to prevent timing attacks
             return crypto.timingSafeEqual(
                 Buffer.from(signature, 'hex'),
                 Buffer.from(expectedSignature, 'hex')
@@ -53,21 +51,34 @@ class SecurityUtils {
         try {
             const encryptedData = Buffer.from(String(encryptedBase64).trim(), 'base64');
             if (encryptedData.length <= 16) return null;
+
             const iv = encryptedData.slice(0, 16);
             const ciphertext = encryptedData.slice(16);
+            
             const decipher = crypto.createDecipheriv('aes-256-cbc', SecurityUtils.AES_KEY, iv);
             let decrypted = decipher.update(ciphertext);
-            return Buffer.concat([decrypted, decipher.final()]);
+            decrypted = Buffer.concat([decrypted, decipher.final()]);
+            
+            return decrypted;
         } catch (err) {
             return null;
         }
     }
 
     static async isMessageValid(redis, messageId, clientTimestamp) {
+        if (!messageId || !clientTimestamp) return { valid: false, reason: 'Missing meta' };
+
         const now = Math.floor(Date.now() / 1000);
-        if (Math.abs(now - clientTimestamp) > SecurityUtils.REPLAY_WINDOW_SECONDS) return { valid: false };[cite: 1]
-        const isNew = await redis.set(`msg_id:${messageId}`, '1', 'EX', 60, 'NX');
-        return isNew ? { valid: true } : { valid: false };
+        const diff = Math.abs(now - clientTimestamp);
+        
+        if (diff > SecurityUtils.REPLAY_WINDOW_SECONDS) {
+            return { valid: false, reason: 'Timestamp expired' };
+        }
+
+        const cacheKey = `msg_id:${messageId}`;
+        const isNew = await redis.set(cacheKey, '1', 'EX', 60, 'NX');
+        
+        return isNew ? { valid: true } : { valid: false, reason: 'Replay' };
     }
 }
 

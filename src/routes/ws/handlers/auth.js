@@ -1,4 +1,4 @@
-const { isValidSignature } = require('../../../utils/security');
+const SecurityUtils = require('../../../utils/security');
 const { loginOrRegisterClient } = require('../../../services/clientService');
 const { getSpoofedGuid } = require('../../../services/guidService');
 const { getLoaderByVersion, getActiveLoader } = require('../../../services/loaderService');
@@ -9,7 +9,6 @@ module.exports = async function handleAuth(fastify, socket, payload) {
 
   if (!hwid || !signature) {
     socket.sendError('AUTH_RESULT', 'Invalid security credentials.');
-    if (socket.close) socket.close(1008, "Policy Violation");
     return null;
   }
 
@@ -19,25 +18,20 @@ module.exports = async function handleAuth(fastify, socket, payload) {
     if (loaderInfo) loaderSecret = loaderInfo.clientSecret;
   }
 
-  if (!isValidSignature(hwid, signature, loaderSecret)) {
+  if (!SecurityUtils.isValidSignature(hwid, signature, loaderSecret)) {
     socket.sendError('AUTH_RESULT', 'Invalid signature for this loader version.');
-    if (socket.close) socket.close(1008, "Policy Violation");
     return null;
   }
 
   const activeLoader = await getActiveLoader(fastify.db);
   if (activeLoader && activeLoader.version !== version) {
-    fastify.log.info(`[AutoUpdate] Signaling update: ${version} -> ${activeLoader.version}`);
     socket.sendSuccess('UPDATE_REQUIRED', {
-      update_info: {
-        download_url: activeLoader.url
-      }
+      update_info: { download_url: activeLoader.url }
     });
     return null;
   }
 
   const { clientId, clientGuid, currentName } = await loginOrRegisterClient(fastify.db, hwid, signature);
-
   const customGuid = await getSpoofedGuid(fastify.db, clientGuid);
   const finalActiveGuid = customGuid || clientGuid;
 
@@ -49,9 +43,7 @@ module.exports = async function handleAuth(fastify, socket, payload) {
     server: 'In Lobby',
     playerNum: -1
   });
-
-  const timeoutSec = parseInt(process.env.HEARTBEAT_TIMEOUT_SEC || '60', 10);
-  await fastify.redis.expire(redisKey, timeoutSec);
+  await fastify.redis.expire(redisKey, 60);
 
   socket.sendSuccess('AUTH_RESULT', { 
     auth_result: {
