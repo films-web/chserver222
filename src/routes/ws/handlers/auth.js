@@ -55,8 +55,7 @@ module.exports = async function handleAuth(fastify, socket, payload) {
         download_url: updateUrl
       }
     });
-    // Optional: we could still let them auth, or return. Usually, loaders exit after signaling update.
-    return clientId; 
+    return null; // Block further actions until updated
   }
 
   socket.sendSuccess('AUTH_RESULT', { 
