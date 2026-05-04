@@ -23,6 +23,8 @@ const { getUserByUsername, verifyPassword } = require('../../services/userServic
 
 // Make sure you created guidService.js like we discussed!
 const { getAllGuids, addCustomGuid, removeCustomGuid, updateCustomGuid } = require('../../services/guidService');
+const { getAllLogs } = require('../../services/logService');
+
 
 module.exports = async function (fastify, opts) {
   
@@ -438,5 +440,13 @@ module.exports = async function (fastify, opts) {
     }
     return { deleted: true, id: request.params.id };
   });
+
+  // --- LOGS ---
+  fastify.get('/logs', { onRequest: [fastify.authenticate] }, async (request, reply) => {
+    const limit = request.query.limit ? parseInt(request.query.limit, 10) : 100;
+    const rows = await getAllLogs(fastify.db, limit);
+    return rows;
+  });
+
 
 };
