@@ -78,12 +78,14 @@ message AuthResultData {
 message FairshotData {
   bytes image_data = 1;     // The raw JPEG/PNG bytes
   string request_id = 2;    // The exact nonce provided by the server in REQUEST_FAIRSHOT
-  uint64 capture_time = 5;  // Local timestamp of when the capture occurred
+  string requester_id = 3;  // ADDED: The client ID of the person who requested this
+  uint64 capture_time = 4;  // Local timestamp of when the capture occurred
 }
 
 message FairshotChallenge {
   string request_id = 1;       // Packet-level nonce (used in the AuthData signature)
   string watermark_secret = 2; // The dynamic key the loader MUST embed inside the image data
+  string requester_id = 3;     // ADDED: The client ID of the person who requested this
 }
 
 message PayloadData {
