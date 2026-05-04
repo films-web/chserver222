@@ -29,7 +29,6 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
             return socket.sendSuccess('FAIRSHOT_ACK', { message: 'Target not found or not using our anticheat.' });
         }
 
-
         let targetSocket = null;
         for (const client of fastify.websocketServer.clients) {
             if (client.clientId === targetPlayer.clientId) {
@@ -45,6 +44,7 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
         const watermarkSecret = crypto.randomBytes(16).toString('hex');
         const requestId = crypto.randomBytes(8).toString('hex');
 
+        // Store the challenge state in Redis for strict verification later
         await fastify.redis.set(`fairshot_challenge:${targetPlayer.clientId}`, JSON.stringify({
             requestId,
             requesterClientId: String(currentClientId),
@@ -52,10 +52,12 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
             watermarkSecret
         }), 'EX', 30);
 
+        // Send the challenge to the target, now including requester_id
         targetSocket.sendSuccess('REQUEST_FAIRSHOT', { 
             fairshot_req: {
                 request_id: requestId,
-                watermark_secret: watermarkSecret
+                watermark_secret: watermarkSecret,
+                requester_id: String(currentClientId) // <-- ADDED: Passing the context to the C++ loader
             }
         });
         
