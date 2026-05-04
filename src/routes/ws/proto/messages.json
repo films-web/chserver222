@@ -50,11 +50,11 @@
               "type": "string",
               "id": 2
             },
-            "serverIp": {
+            "server_ip": {
               "type": "string",
               "id": 3
             },
-            "inGame": {
+            "in_game": {
               "type": "bool",
               "id": 4
             }
@@ -82,7 +82,7 @@
               "type": "string",
               "id": 1
             },
-            "serverTime": {
+            "server_time": {
               "type": "uint64",
               "id": 2
             }
@@ -90,19 +90,19 @@
         },
         "FairshotData": {
           "fields": {
-            "imageData": {
+            "image_data": {
               "type": "bytes",
               "id": 1
             },
-            "requestId": {
+            "request_id": {
               "type": "string",
               "id": 2
             },
-            "requesterId": {
+            "requester_id": {
               "type": "string",
               "id": 3
             },
-            "captureTime": {
+            "capture_time": {
               "type": "uint64",
               "id": 4
             }
@@ -110,15 +110,15 @@
         },
         "FairshotChallenge": {
           "fields": {
-            "requestId": {
+            "request_id": {
               "type": "string",
               "id": 1
             },
-            "watermarkSecret": {
+            "watermark_secret": {
               "type": "string",
               "id": 2
             },
-            "requesterId": {
+            "requester_id": {
               "type": "string",
               "id": 3
             }
@@ -126,15 +126,15 @@
         },
         "PayloadData": {
           "fields": {
-            "dllBytes": {
+            "dll_bytes": {
               "type": "bytes",
               "id": 1
             },
-            "dllHash": {
+            "dll_hash": {
               "type": "string",
               "id": 2
             },
-            "dllName": {
+            "dll_name": {
               "type": "string",
               "id": 3
             }
@@ -159,7 +159,7 @@
         },
         "UpdateData": {
           "fields": {
-            "downloadUrl": {
+            "download_url": {
               "type": "string",
               "id": 1
             }
@@ -175,7 +175,7 @@
               "type": "uint64",
               "id": 2
             },
-            "messageId": {
+            "message_id": {
               "type": "string",
               "id": 3
             },
@@ -183,7 +183,7 @@
               "type": "AuthData",
               "id": 4
             },
-            "playerData": {
+            "player_data": {
               "type": "PlayerData",
               "id": 5
             },
@@ -211,7 +211,7 @@
               "type": "string",
               "id": 3
             },
-            "authResult": {
+            "auth_result": {
               "type": "AuthResultData",
               "id": 4
             },
@@ -219,7 +219,7 @@
               "type": "GuidData",
               "id": 5
             },
-            "pk3Whitelist": {
+            "pk3_whitelist": {
               "type": "WhitelistData",
               "id": 6
             },
@@ -227,16 +227,16 @@
               "type": "PayloadData",
               "id": 7
             },
-            "playersList": {
+            "players_list": {
               "rule": "repeated",
               "type": "Player",
               "id": 8
             },
-            "fairshotReq": {
+            "fairshot_req": {
               "type": "FairshotChallenge",
               "id": 9
             },
-            "updateInfo": {
+            "update_info": {
               "type": "UpdateData",
               "id": 10
             }
