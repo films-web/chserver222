@@ -1,63 +1,56 @@
-require('dotenv').config();
 const crypto = require('crypto');
+const { promisify } = require('util');
 
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const AES_KEY = process.env.AES_ENCRYPTION_KEY;
+class SecurityUtils {
+    // Matches the C++ AesTransportKey
+    static AES_KEY = Buffer.from(process.env.AES_TRANSPORT_KEY, 'hex'); 
+    static REPLAY_WINDOW_SECONDS = 30;
 
-function isValidSignature(hwid, signature, customSecret) {
-  const secret = customSecret || CLIENT_SECRET;
-  const expectedSignature = crypto.createHmac('sha256', secret)
-    .update(hwid)
-    .digest('hex');
-  return signature === expectedSignature;
-}
-
-function encrypt(plaintextBuffer) {
-  try {
-    if (!AES_KEY || AES_KEY.length !== 32) {
-      console.error('[SECURITY ERROR] Server AES Key is invalid or missing.');
-      return '';
+    /**
+     * Decrypts incoming packets from the loader
+     */
+    static decrypt(encryptedBase64) {
+        try {
+            const encryptedData = Buffer.from(encryptedBase64, 'base64');
+            // Assuming AES-256-CBC with a fixed IV for transport or appended IV
+            const iv = encryptedData.slice(0, 16);
+            const ciphertext = encryptedData.slice(16);
+            
+            const decipher = crypto.createDecipheriv('aes-256-cbc', this.AES_KEY, iv);
+            let decrypted = decipher.update(ciphertext);
+            decrypted = Buffer.concat([decrypted, decipher.final()]);
+            
+            return decrypted;
+        } catch (err) {
+            return null;
+        }
     }
 
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(AES_KEY), iv);
-    
-    const ciphertext = Buffer.concat([cipher.update(plaintextBuffer), cipher.final()]);
-    const finalPayload = Buffer.concat([iv, ciphertext]);
-    
-    return finalPayload.toString('base64');
-  } catch (err) {
-    console.error('[SECURITY ERROR] Encryption failed:', err.message);
-    return '';
-  }
+    /**
+     * Anti-Replay Attack Logic
+     * 1. Check if timestamp is within +/- 30s window
+     * 2. Check Redis to ensure message_id hasn't been used
+     */
+    static async isMessageValid(redis, messageId, clientTimestamp) {
+        const now = Math.floor(Date.now() / 1000);
+        
+        // 1. Timestamp Verification
+        const diff = Math.abs(now - clientTimestamp);
+        if (diff > this.REPLAY_WINDOW_SECONDS) {
+            return { valid: false, reason: 'Timestamp outside allowed window (Clock Drift or Replay)' };
+        }
+
+        // 2. Message ID Uniqueness (Idempotency check)
+        // SETNX returns 1 if the key was set (first time seeing it)
+        const cacheKey = `msg_id:${messageId}`;
+        const isNew = await redis.set(cacheKey, '1', 'EX', this.REPLAY_WINDOW_SECONDS * 2, 'NX');
+        
+        if (!isNew) {
+            return { valid: false, reason: 'Duplicate message_id detected (Replay Attack)' };
+        }
+
+        return { valid: true };
+    }
 }
 
-function decrypt(base64Payload) {
-  try {
-    if (!AES_KEY || AES_KEY.length !== 32) {
-      console.error('[SECURITY ERROR] AES_ENCRYPTION_KEY is missing or not 32 bytes in .env!');
-      return null;
-    }
-
-    const cleanStr = base64Payload.replace(/[^A-Za-z0-9+/=]/g, "");
-    const rawData = Buffer.from(cleanStr, 'base64');
-    
-    if (rawData.length <= 16) {
-      console.error(`[SECURITY ERROR] Payload too short (${rawData.length} bytes). Is the loader sending JSON instead of AES?`);
-      return null;
-    }
-
-    const iv = rawData.slice(0, 16);
-    const ciphertext = rawData.slice(16);
-
-    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(AES_KEY), iv);
-    
-    return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-
-  } catch (err) {
-    console.error('[SECURITY ERROR] Decryption failed:', err.message);
-    return null;
-  }
-}
-
-module.exports = { isValidSignature, encrypt, decrypt };
+module.exports = SecurityUtils;
