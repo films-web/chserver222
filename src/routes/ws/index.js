@@ -82,32 +82,49 @@ module.exports = async function (fastify, opts) {
 
     connection.on('message', async (message) => {
       try {
-        if (message.length > 1024 * 1024) { // 1MB limit for Fairshots
+        if (message.length > 1024 * 1024) {
           fastify.log.warn(`[WS] Client ${currentClientId} sent oversized message: ${message.length} bytes`);
           return connection.terminate();
         }
 
-        if (tokens <= 0) return;
+        if (tokens <= 0) {
+            fastify.log.warn(`[WS] Client rate limited.`);
+            return;
+        }
         tokens--;
 
-        const decryptedBuffer = decrypt(message.toString());
-        if (!decryptedBuffer) return;
+        const decryptedBuffer = decrypt(message.toString('utf8').trim());
+        if (!decryptedBuffer) {
+            fastify.log.error(`[WS] Failed to decrypt message from ${currentClientId || 'Unknown IP'}`);
+            return;
+        }
 
-        const decoded = C2SMessage.decode(decryptedBuffer);
+        let decoded;
+        try {
+            decoded = C2SMessage.decode(decryptedBuffer);
+        } catch (err) {
+            fastify.log.error(`[WS] Protobuf Decode Error: ${err.message}`);
+            return;
+        }
+
         const payload = C2SMessage.toObject(decoded, { 
             enums: String, 
             defaults: true
         });
 
-        if (!payload || !payload.action) return;
+        if (!payload || !payload.action) {
+            fastify.log.error(`[WS] Action missing in payload: ${JSON.stringify(payload)}`);
+            return;
+        }
 
         fastify.log.info(`[WS] Received action: ${payload.action} from client ID: ${currentClientId}`);
 
-        // -- GLOBAL ANTI-REPLAY MECHANISM --
+
+        const clientTime = parseInt(payload.timestamp, 10);
         const security = await SecurityUtils.isMessageValid(
             fastify.redis, 
             payload.message_id, 
-            Number(payload.timestamp)
+            clientTime
         );
 
         if (!security.valid) {
@@ -119,12 +136,13 @@ module.exports = async function (fastify, opts) {
         if (handler) {
           await handler(payload);
         } else {
-          connection.sendError(payload.action, `No handler registered for ${payload.action}`);
+          fastify.log.warn(`[WS] No handler registered for ${payload.action}`);
+          if (connection.sendError) connection.sendError(payload.action, `No handler registered`);
         }
 
       } catch (err) {
-        fastify.log.error(`WS Protocol Error: ${err.message}`);
-        connection.sendError('UNKNOWN', 'Protocol processing error');
+        fastify.log.error(`WS Protocol Error: ${err.stack}`);
+        if (connection.sendError) connection.sendError('UNKNOWN', 'Protocol processing error');
       }
     });
 

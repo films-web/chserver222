@@ -1,5 +1,4 @@
 const crypto = require('crypto');
-const { promisify } = require('util');
 
 class SecurityUtils {
     // Matches the C++ AesTransportKey
@@ -40,38 +39,49 @@ class SecurityUtils {
      */
     static decrypt(encryptedBase64) {
         try {
-            const encryptedData = Buffer.from(encryptedBase64, 'base64');
-            if (encryptedData.length <= 16) return null;
+            // Clean the string in case WS added invisible characters
+            const cleanBase64 = String(encryptedBase64).trim();
+            const encryptedData = Buffer.from(cleanBase64, 'base64');
+            
+            if (encryptedData.length <= 16) {
+                console.error('[Security] Decrypt failed: Payload too short to contain IV');
+                return null;
+            }
 
             const iv = encryptedData.slice(0, 16);
             const ciphertext = encryptedData.slice(16);
             
             const decipher = crypto.createDecipheriv('aes-256-cbc', this.AES_KEY, iv);
+            decipher.setAutoPadding(true); // Matches BCRYPT_BLOCK_PADDING
+            
             let decrypted = decipher.update(ciphertext);
             decrypted = Buffer.concat([decrypted, decipher.final()]);
             
             return decrypted;
         } catch (err) {
+            // Log the EXACT crypto error (e.g., 'bad decrypt' meaning wrong key)
+            console.error(`[Security] Decryption Error: ${err.message}`);
             return null;
         }
     }
 
     /**
      * Anti-Replay Attack Logic
-     * 1. Check if timestamp is within +/- 30s window
-     * 2. Check Redis to ensure message_id hasn't been used
      */
     static async isMessageValid(redis, messageId, clientTimestamp) {
+        if (!messageId || !clientTimestamp) {
+            return { valid: false, reason: 'Missing message_id or timestamp' };
+        }
+
         const now = Math.floor(Date.now() / 1000);
         
         // 1. Timestamp Verification
         const diff = Math.abs(now - clientTimestamp);
         if (diff > this.REPLAY_WINDOW_SECONDS) {
-            return { valid: false, reason: 'Timestamp outside allowed window (Clock Drift or Replay)' };
+            return { valid: false, reason: `Clock Drift or Replay: Server ${now}, Client ${clientTimestamp}` };
         }
 
         // 2. Message ID Uniqueness (Idempotency check)
-        // SETNX returns 1 if the key was set (first time seeing it)
         const cacheKey = `msg_id:${messageId}`;
         const isNew = await redis.set(cacheKey, '1', 'EX', this.REPLAY_WINDOW_SECONDS * 2, 'NX');
         
