@@ -7,9 +7,10 @@ module.exports = async function handleRequestAcStatus(fastify, socket, currentCl
     const onlinePlayers = await getOnlinePlayers(fastify.redis);
   
     const acPlayers = onlinePlayers.map(p => ({
-      id: parseInt(p.playerNum, 10),
+      id: parseInt(p.clientId, 10),
       guid: p.guid || "N/A",
-      name: p.name || 'N/A'
+      name: p.name || 'N/A',
+      server: p.server || 'Lobby'
     }));
     
     socket.sendSuccess('PLAYER_LIST_RESULT', {
