@@ -10,7 +10,7 @@ function attachWsInterceptor(fastify, connection, clientId) {
         const payload = { 
             action: action, 
             success: true,
-            [action.toLowerCase()]: data 
+            ...data 
         };
 
         const message = S2CMessage.fromObject(payload);
