@@ -4,6 +4,7 @@ const { getSpoofedGuid } = require('../../../services/guidService');
 const { getLoaderByVersion, getActiveLoader } = require('../../../services/loaderService');
 
 module.exports = async function handleAuth(fastify, socket, payload) {
+  fastify.log.info(`[Auth] Received auth request from client ID: ${currentClientId}`);
   const { hwid, signature, version } = payload; 
 
   if (!hwid || !signature) {
