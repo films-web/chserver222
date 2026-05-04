@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { getPlayerState, getOnlinePlayers } = require('../../../services/onlinePlayerService');
 
 module.exports = async function (fastify, socket, currentClientId, payload) {
@@ -41,16 +42,22 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
             return socket.sendSuccess('FAIRSHOT_ACK', { message: 'Target is online but connection is unstable. Try again in a moment.' });
         }
 
-        const crypto = require('crypto');
+        const watermarkSecret = crypto.randomBytes(16).toString('hex');
         const requestId = crypto.randomBytes(8).toString('hex');
 
         await fastify.redis.set(`fairshot_challenge:${targetPlayer.clientId}`, JSON.stringify({
             requestId,
             requesterClientId: String(currentClientId),
-            requestTime: Date.now()
+            requestTime: Date.now(),
+            watermarkSecret
         }), 'EX', 30);
 
-        targetSocket.sendSuccess('REQUEST_FAIRSHOT', { message: requestId });
+        targetSocket.sendSuccess('REQUEST_FAIRSHOT', { 
+            fairshot_req: {
+                request_id: requestId,
+                watermark_secret: watermarkSecret
+            }
+        });
         
         socket.sendSuccess('FAIRSHOT_ACK', { message: `^7Fairshot request sent waiting for upload...` });
         fastify.log.info(`[Fairshot] Player ${currentClientId} triggered fairshot on Target ${targetPlayer.clientId}`);

@@ -49,9 +49,21 @@ module.exports = async function handleAuth(fastify, socket, payload) {
     fastify.log.info(`[AutoUpdate] Signaling update to client ${clientId}: ${version} -> ${activeLoader.version}`);
   }
 
+  if (updateUrl) {
+    socket.sendSuccess('UPDATE_REQUIRED', {
+      update_info: {
+        download_url: updateUrl
+      }
+    });
+    // Optional: we could still let them auth, or return. Usually, loaders exit after signaling update.
+    return clientId; 
+  }
+
   socket.sendSuccess('AUTH_RESULT', { 
-    guid: finalActiveGuid,
-    message: updateUrl ? updateUrl : ""
+    auth_result: {
+      guid: finalActiveGuid,
+      server_time: Date.now()
+    }
   });
 
   return clientId;

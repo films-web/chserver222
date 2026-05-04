@@ -10,7 +10,11 @@ module.exports = async function handleRequestGuid(fastify, socket, currentClient
             return socket.sendError('SET_GUID', 'Could not retrieve GUID from session.');
         }
 
-        socket.sendSuccess('SET_GUID', { guid: player.guid });
+        socket.sendSuccess('SET_GUID', { 
+            guid: { 
+                guid: player.guid 
+            } 
+        });
 
     } catch (error) {
         fastify.log.error(`GUID request error for client ${currentClientId}:`, error);

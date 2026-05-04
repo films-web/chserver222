@@ -5,7 +5,11 @@ module.exports = async function handleRequestWhitelist(fastify, socket, currentC
 
   try {
     const activeHashes = await whitelistService.getAllWhitelistedHashes(fastify.db);
-    socket.sendSuccess('PK3_WHITELIST_RESULT', { hashes: activeHashes });
+    socket.sendSuccess('PK3_WHITELIST_RESULT', { 
+      pk3_whitelist: { 
+        hashes: activeHashes 
+      } 
+    });
 
   } catch (error) {
     fastify.log.error(`Whitelist request error for client ${currentClientId}:`, error);

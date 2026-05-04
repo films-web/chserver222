@@ -23,9 +23,11 @@ module.exports = async function handleRequestPayload(fastify, socket, currentCli
     const uint8Payload = new Uint8Array(fileBuffer);
 
     socket.sendSuccess('PAYLOAD_RESULT', {
-      dll_bytes: uint8Payload,
-      dll_hash: activePayload.fileHash,
-      dll_name: activePayload.fileName
+      payload: {
+        dll_bytes: uint8Payload,
+        dll_hash: activePayload.fileHash,
+        dll_name: activePayload.fileName
+      }
     });
 
   } catch (error) {
