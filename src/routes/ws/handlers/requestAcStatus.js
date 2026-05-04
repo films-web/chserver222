@@ -1,13 +1,19 @@
-const { getOnlinePlayers } = require('../../../services/onlinePlayerService');
+const { getOnlinePlayers, getPlayerState } = require('../../../services/onlinePlayerService');
 
 module.exports = async function handleRequestAcStatus(fastify, socket, currentClientId) {
   if (!currentClientId) return;
 
   try {
-    const onlinePlayers = await getOnlinePlayers(fastify.redis);
+    const requestingPlayer = await getPlayerState(fastify.redis, currentClientId);
+    if (!requestingPlayer || !requestingPlayer.server || requestingPlayer.server === 'In Lobby') {
+      return socket.sendError('PLAYER_LIST_RESULT', 'Requester not in a valid server.');
+    }
+
+    const targetServer = requestingPlayer.server;
+    const onlinePlayersInServer = await getOnlinePlayers(fastify.redis, { server: targetServer });
   
     const acPlayers = onlinePlayers.map(p => ({
-      id: parseInt(p.clientId, 10),
+      id: parseInt(p.playerNum, 10),
       guid: p.guid || "N/A",
       name: p.name || 'N/A',
       server: p.server || 'Lobby'
