@@ -15,12 +15,13 @@ async function loginOrRegisterClient(db, hwid, signature) {
     return { clientId, clientGuid, currentName: currentName || 'UnnamedPlayer' };
   } else {
     const clientGuid = randomBytes(3).toString('hex');
+    const defaultName = 'UnnamedPlayer';
     const insertResult = await db.query(
       `INSERT INTO clients (hwid, guid, signature, "currentName", "updatedAt") 
        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) RETURNING id`,
-      [hwid, clientGuid, signature, currentName]
+      [hwid, clientGuid, signature, defaultName]
     );
-    return { clientId: insertResult.rows[0].id, clientGuid };
+    return { clientId: insertResult.rows[0].id, clientGuid, currentName: defaultName };
   }
 }
 
