@@ -262,6 +262,14 @@ module.exports = async function (fastify, opts) {
       fs.mkdirSync(saveDir, { recursive: true });
     }
     const savePath = path.join(saveDir, fileName);
+    
+    if (fs.existsSync(savePath)) {
+      try {
+        fs.unlinkSync(savePath);
+      } catch (err) {
+        fastify.log.error(`Failed to delete existing file: ${err.message}`);
+      }
+    }
 
     let fileSize = 0;
     const writeStream = fs.createWriteStream(savePath);
