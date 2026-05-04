@@ -93,7 +93,7 @@ module.exports = async function (fastify, opts) {
         }
         tokens--;
 
-        const decryptedBuffer = decrypt(message.toString('utf8').trim());
+        const decryptedBuffer = SecurityUtils.decrypt(message.toString('utf8').trim());
         if (!decryptedBuffer) {
             fastify.log.error(`[WS] Failed to decrypt message from ${currentClientId || 'Unknown IP'}`);
             return;

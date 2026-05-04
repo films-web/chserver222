@@ -21,7 +21,8 @@ class SecurityUtils {
     static encrypt(data) {
         try {
             const iv = crypto.randomBytes(16);
-            const cipher = crypto.createCipheriv('aes-256-cbc', this.AES_KEY, iv);
+            // FIX: Use SecurityUtils.AES_KEY instead of this.AES_KEY
+            const cipher = crypto.createCipheriv('aes-256-cbc', SecurityUtils.AES_KEY, iv);
             let encrypted = cipher.update(data);
             encrypted = Buffer.concat([encrypted, cipher.final()]);
             
@@ -51,7 +52,8 @@ class SecurityUtils {
             const iv = encryptedData.slice(0, 16);
             const ciphertext = encryptedData.slice(16);
             
-            const decipher = crypto.createDecipheriv('aes-256-cbc', this.AES_KEY, iv);
+            // FIX: Use SecurityUtils.AES_KEY instead of this.AES_KEY
+            const decipher = crypto.createDecipheriv('aes-256-cbc', SecurityUtils.AES_KEY, iv);
             decipher.setAutoPadding(true); // Matches BCRYPT_BLOCK_PADDING
             
             let decrypted = decipher.update(ciphertext);
@@ -59,7 +61,6 @@ class SecurityUtils {
             
             return decrypted;
         } catch (err) {
-            // Log the EXACT crypto error (e.g., 'bad decrypt' meaning wrong key)
             console.error(`[Security] Decryption Error: ${err.message}`);
             return null;
         }
@@ -77,13 +78,15 @@ class SecurityUtils {
         
         // 1. Timestamp Verification
         const diff = Math.abs(now - clientTimestamp);
-        if (diff > this.REPLAY_WINDOW_SECONDS) {
+        // FIX: Use SecurityUtils instead of this
+        if (diff > SecurityUtils.REPLAY_WINDOW_SECONDS) {
             return { valid: false, reason: `Clock Drift or Replay: Server ${now}, Client ${clientTimestamp}` };
         }
 
         // 2. Message ID Uniqueness (Idempotency check)
         const cacheKey = `msg_id:${messageId}`;
-        const isNew = await redis.set(cacheKey, '1', 'EX', this.REPLAY_WINDOW_SECONDS * 2, 'NX');
+        // FIX: Use SecurityUtils instead of this
+        const isNew = await redis.set(cacheKey, '1', 'EX', SecurityUtils.REPLAY_WINDOW_SECONDS * 2, 'NX');
         
         if (!isNew) {
             return { valid: false, reason: 'Duplicate message_id detected (Replay Attack)' };
