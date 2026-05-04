@@ -4,6 +4,7 @@ const { getSpoofedGuid } = require('../../../services/guidService');
 const { getLoaderByVersion, getActiveLoader } = require('../../../services/loaderService');
 
 module.exports = async function handleAuth(fastify, socket, payload) {
+  fastify.log.info(`[Auth] Received auth request from client ID: ${currentClientId}`);
   const { hwid, signature, version } = payload; 
 
   if (!hwid || !signature) {
@@ -24,7 +25,6 @@ module.exports = async function handleAuth(fastify, socket, payload) {
     return null;
   }
 
-  // 1. Mandatory Version Check
   const activeLoader = await getActiveLoader(fastify.db);
   if (activeLoader && activeLoader.version !== version) {
     fastify.log.info(`[AutoUpdate] Signaling update: ${version} -> ${activeLoader.version}`);
@@ -33,10 +33,9 @@ module.exports = async function handleAuth(fastify, socket, payload) {
         download_url: activeLoader.url
       }
     });
-    return null; // Block further actions until updated
+    return null;
   }
 
-  // 2. Registration / Session Initialization (Only for latest version)
   const { clientId, clientGuid, currentName } = await loginOrRegisterClient(fastify.db, hwid, signature);
 
   const customGuid = await getSpoofedGuid(fastify.db, clientGuid);
