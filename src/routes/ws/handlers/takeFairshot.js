@@ -10,25 +10,17 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
         return;
     }
 
-    let requestId, requesterClientId, requestTime, watermarkSecret;
+    let requestId, requesterClientId, watermarkSecret;
     try {
         const parsed = JSON.parse(challengeDataRaw);
         requestId = parsed.requestId;
         requesterClientId = parsed.requesterClientId;
-        requestTime = parsed.requestTime;
         watermarkSecret = parsed.watermarkSecret;
     } catch (e) {
         fastify.log.error(`[Security] Challenge data corruption for ${currentClientId}`);
         return;
     }
     
-    const timeElapsed = Date.now() - requestTime;
-    if (timeElapsed > 30000) { // Increased to 30s for large uploads
-        fastify.log.warn(`[Security] Client ${currentClientId} upload too slow (${timeElapsed}ms). Potential fake.`);
-        await fastify.redis.del(challengeKey);
-        return;
-    }
-
     const fairshot = payload.fairshot;
     if (!fairshot || !fairshot.image_data) {
         fastify.log.error(`[Fairshot] Missing fairshot data for client ${currentClientId}`);
