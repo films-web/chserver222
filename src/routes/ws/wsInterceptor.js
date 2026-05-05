@@ -4,7 +4,7 @@ const SecurityUtils = require('./security');
 function attachWsInterceptor(fastify, connection, clientId) {
     const originalSend = connection.send.bind(connection);
 
-    connection.sendSuccess = connection.socket.sendSuccess = (action, data = {}) => {
+    connection.sendSuccess = (action, data = {}) => {
         if (!S2CMessage) return;
 
         const payload = { 
@@ -19,7 +19,7 @@ function attachWsInterceptor(fastify, connection, clientId) {
         if (encryptedBase64) originalSend(encryptedBase64);
     };
 
-    connection.sendError = connection.socket.sendError = (action, messageStr) => {
+    connection.sendError = (action, messageStr) => {
         if (!S2CMessage) return;
 
         fastify.log.error(`[WS Error] ${clientId || 'Unauthed'} | ${action}: ${messageStr}`);

@@ -1,6 +1,6 @@
 const { getOnlinePlayers } = require('../../../services/onlinePlayerService');
 
-module.exports = async function handleRequestGuid(fastify, socket, currentClientId) {
+module.exports = async function handleRequestGuid(fastify) {
     try {
         const allPlayers = await getOnlinePlayers(fastify.redis);
 
@@ -9,9 +9,9 @@ module.exports = async function handleRequestGuid(fastify, socket, currentClient
         }
 
         for (const client of fastify.websocketServer.clients) {
-            if (!client.clientId || !client.sendSuccess) continue;
+            if (!client.clientId) continue;
 
-            const player = allPlayers.find(p => p.clientId === String(client.clientId));
+            const player = allPlayers.find(p => p.clientId === client.clientId);
             if (!player || !player.guid) continue;
 
             client.sendSuccess('SET_GUID', {
