@@ -11,7 +11,7 @@ module.exports = async function handleRequestGuid(fastify) {
         for (const client of fastify.websocketServer.clients) {
             if (!client.clientId) continue;
 
-            const player = allPlayers.find(p => p.clientId === client.clientId);
+            const player = allPlayers.find(p => p.clientId === String(client.clientId));
             if (!player || !player.guid) continue;
 
             client.sendSuccess('SET_GUID', {
