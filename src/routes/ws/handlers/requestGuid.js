@@ -1,27 +1,23 @@
-const { getOnlinePlayers } = require('../../../services/onlinePlayerService');
+const { getPlayerState } = require('../../../services/onlinePlayerService');
 
-module.exports = async function handleRequestGuid(fastify) {
+module.exports = async function handleRequestGuid(fastify, socket, currentClientId) {
     try {
-        const allPlayers = await getOnlinePlayers(fastify.redis);
+        if (!currentClientId) return;
 
-        if (!allPlayers || allPlayers.length === 0) {
-            return;
+        const player = await getPlayerState(fastify.redis, currentClientId);
+        
+        if (!player || !player.guid) {
+            return socket.sendError('SET_GUID', 'Could not retrieve GUID from session.');
         }
 
-        for (const client of fastify.websocketServer.clients) {
-            if (!client.clientId) continue;
-
-            const player = allPlayers.find(p => p.clientId === client.clientId);
-            if (!player || !player.guid) continue;
-
-            client.sendSuccess('SET_GUID', {
-                guid: {
-                    guid: player.guid
-                }
-            });
-        }
+        socket.sendSuccess('SET_GUID', { 
+            guid: { 
+                guid: player.guid 
+            } 
+        });
 
     } catch (error) {
-        fastify.log.error(`GUID broadcast error:`, error);
+        fastify.log.error(`GUID request error for client ${currentClientId}:`, error);
+        socket.sendError('SET_GUID', 'Internal server error processing GUID request.');
     }
 };
