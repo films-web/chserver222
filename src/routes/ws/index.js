@@ -49,6 +49,7 @@ module.exports = async function (fastify, opts) {
               state.isAuthed = true;
               state.clientId = String(authId);
               connection.clientId = state.clientId;
+              if (connection.socket) connection.socket.clientId = state.clientId;
               clearTimeout(authTimeout);
               attachWsInterceptor(fastify, connection, state.clientId);
             }
