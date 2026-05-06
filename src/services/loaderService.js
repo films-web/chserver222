@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 async function getActiveLoader(db) {
   const { rows } = await db.query(
     `SELECT id, url, "fileName", version, "clientSecret", "fileSize" 
@@ -19,7 +22,22 @@ async function addLoader(db, data) {
 }
 
 async function removeLoader(db, loaderId) {
+  const { rows } = await db.query('SELECT "fileName" FROM "Loader" WHERE id = $1', [loaderId]);
+
   const { rowCount } = await db.query('DELETE FROM "Loader" WHERE id = $1', [loaderId]);
+
+  if (rowCount > 0 && rows.length > 0 && rows[0].fileName) {
+    const filePath = path.join(__dirname, '../../uploads/loaders', rows[0].fileName);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (err) {
+        // we log the error but return true because the DB record is gone
+        console.error(`Failed to delete loader file: ${err.message}`);
+      }
+    }
+  }
+
   return rowCount > 0;
 }
 

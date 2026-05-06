@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 async function getActivePayload(db) {
   const { rows } = await db.query(
     `SELECT id, url, "fileHash", "fileName", version 
@@ -19,7 +22,22 @@ async function addPayload(db, data) {
 }
 
 async function removePayload(db, payloadId) {
+  const { rows } = await db.query('SELECT "fileName" FROM "Payload" WHERE id = $1', [payloadId]);
+  
   const { rowCount } = await db.query('DELETE FROM "Payload" WHERE id = $1', [payloadId]);
+  
+  if (rowCount > 0 && rows.length > 0 && rows[0].fileName) {
+    const filePath = path.join(__dirname, '../../uploads/payloads', rows[0].fileName);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (err) {
+        // we log the error but return true because the DB record is gone
+        console.error(`Failed to delete payload file: ${err.message}`);
+      }
+    }
+  }
+
   return rowCount > 0;
 }
 
