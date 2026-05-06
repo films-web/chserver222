@@ -33,7 +33,7 @@ const start = async () => {
       limits: { fileSize: 50 * 1024 * 1024 }
     });
 
-    await apiServer.register(rateLimit, {
+    /* await apiServer.register(rateLimit, {
       redis: apiServer.redis,
       max: 50,
       timeWindow: '1 minute',
@@ -41,6 +41,7 @@ const start = async () => {
         return req.headers['x-client-id'] || req.ip;
       }
     });
+    */
 
     await apiServer.register(require('./plugins/responseInterceptor'));
     await apiServer.register(require('./routes/api/index'));
@@ -51,12 +52,13 @@ const start = async () => {
     await wsServer.register(require('@fastify/websocket'));
 
     // Limits connection attempts (handshakes), not messages!
-    await wsServer.register(rateLimit, {
+    /* await wsServer.register(rateLimit, {
       redis: wsServer.redis,
       max: 10,
       timeWindow: '1 minute',
       keyGenerator: (req) => req.ip
     });
+    */
 
     await wsServer.register(require('./routes/ws/index'));
 
