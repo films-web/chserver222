@@ -94,3 +94,14 @@ CREATE TABLE "Loader" (
 );
 
 CREATE INDEX "Loader_isActive_idx" ON "Loader"("isActive");
+ 
+CREATE TABLE "logs" (
+    "id" SERIAL NOT NULL,
+    "clientId" INTEGER,
+    "message" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "logs_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "logs_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+ 
+CREATE INDEX "logs_clientId_idx" ON "logs"("clientId");

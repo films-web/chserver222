@@ -42,6 +42,7 @@ enum ActionType {
   // 16-17: Misc / Acks
   GET_GUID_REQ = 16;
   FAIRSHOT_ACK = 17;
+  LOG_EVENT = 18;
 }
 
 // ---------------------------------------------------------
@@ -123,6 +124,7 @@ message C2S_Message {
   FairshotData fairshot = 6;  
   
   string target = 7;          // Target #ID or 6-char GUID for requests
+  string log_message = 8;     // For LOG_EVENT
 }
 
 // ---------------------------------------------------------
