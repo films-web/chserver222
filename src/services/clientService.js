@@ -41,15 +41,7 @@ async function logNameChangeHistory(db, clientId, newName, server) {
   );
 }
 
-async function logEvent(db, clientId, message) {
-  await db.query(
-    'INSERT INTO logs ("clientId", "message") VALUES ($1, $2)',
-    [clientId, message]
-  );
-}
-
 module.exports = { 
   loginOrRegisterClient, 
-  logNameChangeHistory,
-  logEvent
+  logNameChangeHistory 
 };

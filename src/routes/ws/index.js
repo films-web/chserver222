@@ -94,11 +94,6 @@ module.exports = async function (fastify, opts) {
             if (!state.isAuthed) return;
             await handlers.handleTakeFairshot(fastify, connection, state.clientId, payload);
             break;
- 
-          case 'LOG_EVENT':
-            if (!state.isAuthed) return;
-            await handlers.handleLogEvent(fastify, connection, state.clientId, payload);
-            break;
 
           default:
             fastify.log.warn(`[WS] No handler found for: ${payload.action}`);
