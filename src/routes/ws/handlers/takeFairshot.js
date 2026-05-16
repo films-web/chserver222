@@ -21,7 +21,7 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
         return;
     }
     
-    const fairshot = payload.fairshot;
+    const fairshot = payload.fairshot || payload.fairshot_data;
     if (!fairshot || !fairshot.image_data) {
         fastify.log.error(`[Fairshot] Missing fairshot data for client ${currentClientId}`);
         return;
@@ -32,21 +32,22 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
         return;
     }
 
-    if (String(requesterClientId) !== String(fairshot.requester_id)) {
-        fastify.log.warn(`[Security] Client ${currentClientId} altered requester ID. Expected: ${requesterClientId}, Got: ${fairshot.requester_id}`);
-        return;
-    }
-
     try {
         const player = await getPlayerState(fastify.redis, currentClientId);
         if (!player || !player.guid) throw new Error('Player GUID not found for verification.');
 
-        const imageBuffer = Buffer.from(fairshot.image_data);
+        let imageBuffer;
+        if (Buffer.isBuffer(fairshot.image_data) || fairshot.image_data instanceof Uint8Array) {
+            imageBuffer = Buffer.from(fairshot.image_data);
+        } else {
+            imageBuffer = Buffer.from(String(fairshot.image_data), 'base64');
+        }
+
         const watermarkBuffer = Buffer.from(watermarkSecret, 'utf8');
-        
         if (!imageBuffer.includes(watermarkBuffer)) {
             fastify.log.warn(`[Security] Client ${currentClientId} uploaded fairshot without valid watermark!`);
             await fastify.redis.del(challengeKey);
+            connection.sendSuccess('FAIRSHOT_ACK');
             return;
         }
 
@@ -56,15 +57,16 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
 
         const serverIp = player.server || 'Unknown';
         const cleanName = player.name ? player.name.replace(/\^./g, '').trim() : 'Unknown';
-        
         await saveFairshot(fastify, player.guid, currentClientId, serverIp, imageBuffer, cleanName);
         
         connection.sendSuccess('FAIRSHOT_ACK');
 
-        if (fairshot.requester_id) {
+        if (requesterClientId) {
             for (const client of fastify.websocketServer.clients) {
-                if (String(client.clientId) === String(fairshot.requester_id)) {
-                    client.sendSuccess('FAIRSHOT_ACK', { message: `^3[CheatHaram] ^7Fairshot is ready! View it at: https://ch-sof2.online\n` });
+                if (String(client.clientId) === String(requesterClientId)) {
+                    client.sendSuccess('FAIRSHOT_ACK', { 
+                        message: `^3[CheatHaram] ^7Fairshot of ${cleanName} is successfully verified and ready! View it at: https://ch-sof2.online\n` 
+                    });
                     break;
                 }
             }

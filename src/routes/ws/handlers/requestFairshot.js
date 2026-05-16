@@ -11,9 +11,7 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
         }
 
         const targetIdentifier = payload.target;
-        if (!targetIdentifier) {
-            return;
-        }
+        if (!targetIdentifier) return;
 
         const cleanTarget = targetIdentifier.startsWith('#') 
             ? targetIdentifier.substring(1) 
@@ -45,7 +43,8 @@ module.exports = async function (fastify, socket, currentClientId, payload) {
             return socket.sendSuccess('FAIRSHOT_ACK', { message: '^3[CheatHaram] ^7Target is online but connection is unstable. Try again in a moment.' });
         }
 
-        const watermarkSecret = crypto.randomBytes(16).toString('hex');
+
+        const watermarkSecret = crypto.randomBytes(10).toString('hex'); 
         const requestId = crypto.randomBytes(8).toString('hex');
 
         await fastify.redis.set(`fairshot_challenge:${targetPlayer.clientId}`, JSON.stringify({
