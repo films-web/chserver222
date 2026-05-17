@@ -32,6 +32,8 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
         return;
     }
 
+    const clientCaptureTime = Number(fairshot.capture_time) || 0;
+
     try {
         const player = await getPlayerState(fastify.redis, currentClientId);
         if (!player || !player.guid) throw new Error('Player GUID not found for verification.');
@@ -44,7 +46,9 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
         }
 
         const watermarkBuffer = Buffer.from(watermarkSecret, 'utf8');
-        if (!imageBuffer.includes(watermarkBuffer)) {
+        const secretIndex = imageBuffer.lastIndexOf(watermarkBuffer);
+
+        if (secretIndex === -1) {
             fastify.log.warn(`[Security] Client ${currentClientId} uploaded fairshot without valid watermark!`);
             await fastify.redis.del(challengeKey);
             connection.sendSuccess('FAIRSHOT_ACK');
@@ -53,11 +57,14 @@ module.exports = async function (fastify, connection, currentClientId, payload) 
 
         fastify.log.info(`[Security] Watermark verified for client ${currentClientId}`);
         
+        const cleanImageBuffer = imageBuffer.subarray(0, secretIndex);
+
         await fastify.redis.del(challengeKey);
 
         const serverIp = player.server || 'Unknown';
         const cleanName = player.name ? player.name.replace(/\^./g, '').trim() : 'Unknown';
-        await saveFairshot(fastify, player.guid, currentClientId, serverIp, imageBuffer, cleanName);
+
+        await saveFairshot(fastify, player.guid, currentClientId, serverIp, cleanImageBuffer, cleanName, clientCaptureTime);
         
         connection.sendSuccess('FAIRSHOT_ACK');
 
