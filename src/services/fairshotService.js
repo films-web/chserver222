@@ -18,11 +18,12 @@ async function saveFairshot(fastify, guid, clientId, serverIp, compressedData, p
     fs.writeFileSync(savePath, compressedData);
 
     const imageUrl = `https://api.ch-sof2.online/uploads/fairshots/${uniqueFileName}`;
+    
     const captureDate = captureTime ? new Date(Number(captureTime) * 1000) : new Date();
 
     await fastify.db.query(
-      `INSERT INTO "Fairshot" ("clientId", "imageUrl", "server", "playerName", "captureTime", "createdAt") 
-       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`,
+      `INSERT INTO "Fairshot" ("clientId", "imageUrl", "server", "playerName", "createdAt") 
+       VALUES ($1, $2, $3, $4, $5)`,
       [clientId, imageUrl, serverIp || 'Unknown Server', playerName || 'Unknown', captureDate]
     );
 
